@@ -1,6 +1,6 @@
 # Domino Define for Deno
 
-[![codecov](https://codecov.io/gh/kamekyame/donimo-define-deno/branch/main/graph/badge.svg?token=AGDKBIOAUW)](https://codecov.io/gh/kamekyame/donimo-define-deno)
+[![codecov](https://codecov.io/gh/kamekyame/domino-define-deno/branch/main/graph/badge.svg?token=AGDKBIOAUW)](https://codecov.io/gh/kamekyame/domino-define-deno)
 
 MIDI音源編集ソフト「[Domino](https://takabosoft.com/domino)」の音源定義ファイルを作成するためのTypeScriptクラス（for
 [Deno](https://deno.land/)）です。
