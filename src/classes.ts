@@ -159,18 +159,8 @@ export class ModuleData implements Base {
       ControlChangeMacroList: controlChangeMacroList_,
       TemplateList: templateList_,
     } = node;
-    if (typeof name !== "string")
-      throw new DominoError("Invalid XML: Not found ModuleData Name");
-    if (folder !== undefined && typeof folder !== "string")
-      throw new DominoError("Invalid XML: Not found ModuleData Folder");
     if (priority !== undefined && typeof priority !== "number")
       throw new DominoError("Invalid XML: Not found ModuleData Priority");
-    if (fileCreator !== undefined && typeof fileCreator !== "string")
-      throw new DominoError("Invalid XML: Not found ModuleData FileCreator");
-    if (fileVersion !== undefined && typeof fileVersion !== "string")
-      throw new DominoError("Invalid XML: Not found ModuleData FileVersion");
-    if (website !== undefined && typeof website !== "string")
-      throw new DominoError("Invalid XML: Not found ModuleData Website");
 
     let instrumentList;
     if (instrumentList_ === null || isNode(instrumentList_))
@@ -189,12 +179,12 @@ export class ModuleData implements Base {
 
     const moduleData = new ModuleData(
       {
-        name,
-        folder,
+        name: String(name),
+        folder: String(folder),
         priority,
-        fileCreator,
-        fileVersion,
-        website,
+        fileCreator: String(fileCreator),
+        fileVersion: String(fileVersion),
+        website: String(website),
       },
       { instrumentList, drumSetList, controlChangeMacroList, templateList }
     );
@@ -370,15 +360,12 @@ class Map<T extends Bank> {
   protected static fromXMLNodeBase(node: node) {
     const { "@Name": name, PC: pc_ } = node;
 
-    if (typeof name !== "string")
-      throw new DominoError("Invalid XML: Not found Map Name");
-
     let pcNodes = [];
     if (pc_) {
       if (Array.isArray(pc_)) pcNodes = pc_;
       else pcNodes = [pc_];
     }
-    return { name, pcNodes };
+    return { name: String(name), pcNodes };
   }
 }
 
@@ -432,9 +419,6 @@ class PC<T extends Bank> {
   protected static fromXMLNodeBase(node: node) {
     const { "@Name": name, "@PC": pc, Bank: bank_ } = node;
 
-    if (typeof name !== "string")
-      throw new DominoError("Invalid XML: Not found PC Name");
-
     if (typeof pc !== "number")
       throw new DominoError("Invalid XML: Not found PC");
 
@@ -444,7 +428,7 @@ class PC<T extends Bank> {
     if (bankNodes === undefined)
       throw new DominoError("Invalid XML: Not found Bank");
 
-    return { name, pc, bankNodes };
+    return { name: String(name), pc, bankNodes };
   }
 }
 
@@ -514,16 +498,13 @@ export class Bank implements Base {
   protected static fromXMLNodeBase(node: node) {
     const { "@Name": name, "@LSB": lsb, "@MSB": msb } = node;
 
-    if (typeof name !== "string")
-      throw new DominoError("Invalid XML: Not found Bank Name");
-
     if (lsb !== undefined && typeof lsb !== "number")
       throw new DominoError("Invalid XML: Not found Bank LSB");
 
     if (msb !== undefined && typeof msb !== "number")
       throw new DominoError("Invalid XML: Not found Bank MSB");
 
-    return { name, lsb, msb };
+    return { name: String(name), lsb, msb };
   }
 
   static fromXMLNode(node: node) {
@@ -594,12 +575,10 @@ export class Tone implements Base {
   static fromXMLNode(node: node) {
     const { "@Name": name, "@Key": key } = node;
 
-    if (typeof name !== "string")
-      throw new DominoError("Invalid XML: Not found Tone Name");
     if (typeof key !== "number")
       throw new DominoError("Invalid XML: Not found Tone Key");
 
-    const tone = new this(name, key);
+    const tone = new this(String(name), key);
     return tone;
   }
 }
@@ -651,9 +630,9 @@ export class CCMFolder implements Base {
       CCM: ccms_,
       Table: tables_,
     } = node;
-    if (typeof name !== "string")
-      throw new DominoError("Invalid XML: Not found Folder Name");
-    const param: ConstructorParameters<typeof CCMFolder>[0] = { name };
+    const param: ConstructorParameters<typeof CCMFolder>[0] = {
+      name: String(name),
+    };
     if (id !== undefined) {
       if (typeof id !== "number")
         throw new DominoError("Invalid XML: Not found Folder ID");
@@ -761,9 +740,10 @@ export class CCM implements Base {
 
     if (typeof id !== "number")
       throw new DominoError("Invalid XML: Not found CCM ID");
-    if (typeof name !== "string")
-      throw new DominoError("Invalid XML: Not found CCM Name");
-    const param: ConstructorParameters<typeof this>[0] = { id, name };
+    const param: ConstructorParameters<typeof this>[0] = {
+      id,
+      name: String(name),
+    };
 
     if (color !== undefined) {
       if (typeof color !== "string")
@@ -872,9 +852,7 @@ export class Value implements Base {
       else param.offset = offset;
     }
     if (name !== undefined) {
-      if (typeof name !== "string")
-        throw new DominoError("Invalid XML: Not found Value Name");
-      else param.name = name;
+      param.name = String(name);
     }
     if (type !== undefined) {
       if (type !== "Key")
@@ -925,12 +903,12 @@ export class Entry implements Base {
   static fromXMLNode(node: node) {
     const { "@Label": label, "@Value": value } = node;
 
-    if (label === undefined || typeof label !== "string")
+    if (label === undefined)
       throw new DominoError("Invalid XML: Not found Entry Label");
     if (value === undefined || typeof value !== "number")
       throw new DominoError("Invalid XML: Not found Entry Value");
 
-    const entry = new this({ label, value });
+    const entry = new this({ label: String(label), value });
     return entry;
   }
 }
@@ -1026,7 +1004,7 @@ export class TemplateFolder implements Base {
   static fromXMLNode(node: node) {
     const { "@Name": name, Template: tags_ } = node;
 
-    if (name === undefined || typeof name !== "string")
+    if (name === undefined)
       throw new DominoError("Invalid XML: Not found Folder Name");
 
     const tags: Template[] = [];
@@ -1036,7 +1014,7 @@ export class TemplateFolder implements Base {
       });
     }
 
-    const folder = new this({ name }, tags);
+    const folder = new this({ name: String(name) }, tags);
     return folder;
   }
 }
@@ -1079,9 +1057,11 @@ export class Template implements Base {
   static fromXMLNode(node: node) {
     const { "@Name": name, "@ID": id, CC: ccs_ } = node;
 
-    if (name === undefined || typeof name !== "string")
+    if (name === undefined)
       throw new DominoError("Invalid XML: Not found Template Name");
-    const params: ConstructorParameters<typeof this>[0] = { name };
+    const params: ConstructorParameters<typeof this>[0] = {
+      name: String(name),
+    };
     if (id !== undefined) {
       if (typeof id !== "number")
         throw new DominoError("Invalid XML: Not found Template ID");
