@@ -159,8 +159,20 @@ export class ModuleData implements Base {
       ControlChangeMacroList: controlChangeMacroList_,
       TemplateList: templateList_,
     } = node;
-    if (priority !== undefined && typeof priority !== "number")
-      throw new DominoError("Invalid XML: Not found ModuleData Priority");
+
+    if (name === undefined)
+      throw new DominoError("Invalid XML: Not found ModuleData Name");
+    const param: ConstructorParameters<typeof this>[0] = { name: String(name) };
+
+    if (folder !== undefined) param.folder = String(folder);
+    if (priority !== undefined) {
+      if (typeof priority !== "number")
+        throw new DominoError("Invalid XML: Not found ModuleData Priority");
+      else param.priority = priority;
+    }
+    if (fileCreator !== undefined) param.fileCreator = String(fileCreator);
+    if (fileVersion !== undefined) param.fileVersion = String(fileVersion);
+    if (website !== undefined) param.website = String(website);
 
     let instrumentList;
     if (instrumentList_ === null || isNode(instrumentList_))
@@ -177,17 +189,12 @@ export class ModuleData implements Base {
     if (templateList_ === null || isNode(templateList_))
       templateList = TemplateList.fromXMLNode(templateList_);
 
-    const moduleData = new ModuleData(
-      {
-        name: String(name),
-        folder: String(folder),
-        priority,
-        fileCreator: String(fileCreator),
-        fileVersion: String(fileVersion),
-        website: String(website),
-      },
-      { instrumentList, drumSetList, controlChangeMacroList, templateList }
-    );
+    const moduleData = new ModuleData(param, {
+      instrumentList,
+      drumSetList,
+      controlChangeMacroList,
+      templateList,
+    });
     return moduleData;
   }
 }
@@ -360,6 +367,9 @@ class Map<T extends Bank> {
   protected static fromXMLNodeBase(node: node) {
     const { "@Name": name, PC: pc_ } = node;
 
+    if (name === undefined)
+      throw new DominoError("Invalid XML: Not Found Map Name");
+
     let pcNodes = [];
     if (pc_) {
       if (Array.isArray(pc_)) pcNodes = pc_;
@@ -419,6 +429,8 @@ class PC<T extends Bank> {
   protected static fromXMLNodeBase(node: node) {
     const { "@Name": name, "@PC": pc, Bank: bank_ } = node;
 
+    if (name === undefined)
+      throw new DominoError("Invalid XML: Not Found PC Name");
     if (typeof pc !== "number")
       throw new DominoError("Invalid XML: Not found PC");
 
@@ -498,6 +510,9 @@ export class Bank implements Base {
   protected static fromXMLNodeBase(node: node) {
     const { "@Name": name, "@LSB": lsb, "@MSB": msb } = node;
 
+    if (name === undefined)
+      throw new DominoError("Invalid XML: Not found Name");
+
     if (lsb !== undefined && typeof lsb !== "number")
       throw new DominoError("Invalid XML: Not found Bank LSB");
 
@@ -575,6 +590,8 @@ export class Tone implements Base {
   static fromXMLNode(node: node) {
     const { "@Name": name, "@Key": key } = node;
 
+    if (name === undefined)
+      throw new DominoError("Invalid XML: Not found Tone Name");
     if (typeof key !== "number")
       throw new DominoError("Invalid XML: Not found Tone Key");
 
@@ -630,6 +647,8 @@ export class CCMFolder implements Base {
       CCM: ccms_,
       Table: tables_,
     } = node;
+    if (name === undefined)
+      throw new DominoError("Invalid XML: Not found Folder Name");
     const param: ConstructorParameters<typeof CCMFolder>[0] = {
       name: String(name),
     };
@@ -740,6 +759,8 @@ export class CCM implements Base {
 
     if (typeof id !== "number")
       throw new DominoError("Invalid XML: Not found CCM ID");
+    if (name === undefined)
+      throw new DominoError("Invalid XML: Not found CCM Name");
     const param: ConstructorParameters<typeof this>[0] = {
       id,
       name: String(name),
