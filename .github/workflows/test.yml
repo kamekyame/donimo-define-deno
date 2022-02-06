@@ -22,6 +22,7 @@ jobs:
           wget https://takabosoft.com/download/win/domino/Domino144.zip
           unar Domino144.zip
           cp -r Domino144/Module/ ./test/sample-files/
+          rm ./test/sample-files/ok_XG2k.xml
       - name: Run test
         run: |
           deno test -A --coverage=./test/coverage
