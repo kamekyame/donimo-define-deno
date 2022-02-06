@@ -13,6 +13,11 @@ jobs:
       - uses: denoland/setup-deno@v1
         with:
           deno-version: v1.x
+      - name: Download sample XML file
+        run: |
+          wget https://takabosoft.com/download/win/domino/Domino144.zip
+          unar Domino144.zip
+          cp -r Domino144/Module/ ./test/sample-files/
       - name: Run test
         run: |
           deno test -A --coverage=./test/coverage
