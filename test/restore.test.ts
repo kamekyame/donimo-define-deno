@@ -62,6 +62,7 @@ Deno.test({
         new Domino.CCMFolder({ name: "test-nest-folder" }),
         new Domino.CCMFolderLink({ name: "test-nest-folder-link", id: 0 }),
         new Domino.CCM({ id: 0, name: "test-ccm" }),
+        new Domino.CCMLink({ id: 0, value: 0, gate: 0 }),
         new Domino.Table({ id: 0 }, entries),
       ]),
       new Domino.CCMFolderLink({ name: "test-folder-link", id: 0 }),
@@ -81,6 +82,8 @@ Deno.test({
         },
         { value, gate, memo: "test-memo", data },
       ),
+      new Domino.CCMLink({ id: 0 }),
+      new Domino.CCMLink({ id: 0, value: 0, gate: 0 }),
       new Domino.Table({ id: 0 }),
       new Domino.Table({ id: 0 }, entries),
     ];

@@ -23,6 +23,8 @@ jobs:
           unar Domino144.zip
           cp -r Domino144/Module/ ./test/sample-files/
           rm ./test/sample-files/ok_XG2k.xml
+          rm ./test/sample-files/SC-88Pro.xml
+          rm ./test/sample-files/SC-8850.xml
       - name: Run test
         run: |
           deno test -A --coverage=./test/coverage

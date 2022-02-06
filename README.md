@@ -95,13 +95,13 @@ console.log(file);
           - [x] Tone
   - [x] ControlChangeMacroList
     - [x] Folder
-    - [ ] FolderLink
+    - [x] FolderLink
     - [x] CCM
       - [x] Value,Gate
         - [x] Entry
       - [x] Memo
       - [x] Data
-    - [ ] CCMLink
+    - [x] CCMLink
     - [x] Table
       - [x] Entry
   - [x] TemplateList
