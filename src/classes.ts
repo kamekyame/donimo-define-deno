@@ -254,7 +254,7 @@ export class DrumSetList extends MapList<DrumMap> implements Base {
 }
 
 export class ControlChangeMacroList implements Base {
-  public tags: (CCMFolder | CCM | Table)[];
+  public tags: (CCMFolder | CCMFolderLink | CCM | Table)[];
 
   constructor(tags?: typeof ControlChangeMacroList.prototype.tags) {
     this.tags = tags || [];
@@ -267,6 +267,10 @@ export class ControlChangeMacroList implements Base {
     const node: unode = {
       Folder: this.tags.flatMap((tags) => {
         if (tags instanceof CCMFolder) return [tags.toXMLNode()];
+        else return [];
+      }),
+      FolderLink: this.tags.flatMap((tags) => {
+        if (tags instanceof CCMFolderLink) return [tags.toXMLNode()];
         else return [];
       }),
       CCM: this.tags.flatMap((tags) => {
@@ -285,10 +289,20 @@ export class ControlChangeMacroList implements Base {
   static fromXMLNode(node: node | null) {
     const tags: ControlChangeMacroList["tags"] = [];
     if (node) {
-      const { Folder: folders_, CCM: ccms_, Table: tables_ } = node;
+      const {
+        Folder: folders_,
+        FolderLink: folderLinks_,
+        CCM: ccms_,
+        Table: tables_,
+      } = node;
       if (isNode(folders_)) {
         nodeToArray(folders_).forEach((folderNode) => {
           tags.push(CCMFolder.fromXMLNode(folderNode));
+        });
+      }
+      if (isNode(folderLinks_)) {
+        nodeToArray(folderLinks_).forEach((folderLinkNode) => {
+          tags.push(CCMFolderLink.fromXMLNode(folderLinkNode));
         });
       }
       if (isNode(ccms_)) {
@@ -623,7 +637,7 @@ export class CCMFolder implements Base {
     name: string;
     id?: number;
   };
-  public tags: (CCMFolder | CCM | Table)[];
+  public tags: (CCMFolder | CCMFolderLink | CCM | Table)[];
 
   constructor(
     param: typeof CCMFolder.prototype.param,
@@ -641,6 +655,10 @@ export class CCMFolder implements Base {
       "@Name": this.param.name,
       Folder: this.tags.flatMap((tags) => {
         if (tags instanceof CCMFolder) return [tags.toXMLNode()];
+        else return [];
+      }),
+      FolderLink: this.tags.flatMap((tags) => {
+        if (tags instanceof CCMFolderLink) return [tags.toXMLNode()];
         else return [];
       }),
       CCM: this.tags.flatMap((tags) => {
@@ -662,6 +680,7 @@ export class CCMFolder implements Base {
       "@Name": name,
       "@ID": id,
       Folder: folders_,
+      FolderLink: folderLinks_,
       CCM: ccms_,
       Table: tables_,
     } = node;
@@ -684,6 +703,11 @@ export class CCMFolder implements Base {
         tags.push(CCMFolder.fromXMLNode(folderNode));
       });
     }
+    if (isNode(folderLinks_)) {
+      nodeToArray(folderLinks_).forEach((folderLinkNode) => {
+        tags.push(CCMFolderLink.fromXMLNode(folderLinkNode));
+      });
+    }
     if (isNode(ccms_)) {
       nodeToArray(ccms_).forEach((ccmNode) => {
         tags.push(CCM.fromXMLNode(ccmNode));
@@ -697,6 +721,63 @@ export class CCMFolder implements Base {
 
     const folder = new this(param, tags);
     return folder;
+  }
+}
+
+export class CCMFolderLink implements Base {
+  public param: {
+    name: string;
+    id: number;
+    value?: number;
+    gate?: number;
+  };
+
+  constructor(
+    param: typeof CCMFolderLink.prototype.param,
+  ) {
+    this.param = param;
+  }
+
+  check() {}
+
+  toXMLNode() {
+    this.check();
+    const node: unode = {
+      "@Name": this.param.name,
+      "@ID": this.param.id,
+    };
+    if (this.param.value !== undefined) node["@Value"] = this.param.value;
+    if (this.param.gate !== undefined) node["@Gate"] = this.param.gate;
+
+    return node;
+  }
+
+  static fromXMLNode(node: node) {
+    const { "@Name": name, "@ID": id, "@Value": value, "@Gate": gate } = node;
+
+    if (name === undefined) {
+      throw new DominoError("Invalid XML: Not found CCM FolderLink Name");
+    }
+    if (id === undefined || typeof id !== "number") {
+      throw new DominoError("Invalid XML: Not found FolderLink ID");
+    }
+    const param: ConstructorParameters<typeof CCMFolderLink>[0] = {
+      name: String(name),
+      id,
+    };
+    if (value !== undefined) {
+      if (typeof value !== "number") {
+        throw new DominoError("Invalid XML: Not found FolderLink Value");
+      } else param.value = value;
+    }
+    if (gate !== undefined) {
+      if (typeof gate !== "number") {
+        throw new DominoError("Invalid XML: Not found FolderLink Gate");
+      } else param.gate = gate;
+    }
+
+    const folderLink = new this(param);
+    return folderLink;
   }
 }
 
