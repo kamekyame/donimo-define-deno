@@ -6,7 +6,7 @@ Deno.test({
   fn: () => {
     const fileStr = `<?xml version="1.0" encoding="Shift_JIS"?>
     <ModuleData Name="test"><InstrumentList>
-    <Map Name="0"></Map>
+    <Map Dummy="aaa"></Map>
     </InstrumentList></ModuleData>`;
     assertThrows(() => {
       Domino.File.fromXML(fileStr);

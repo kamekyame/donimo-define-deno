@@ -1,4 +1,4 @@
-import { parse, stringify, node, unode } from "../deps.ts";
+import { node, parse, stringify, unode } from "../deps.ts";
 import { DominoError } from "./util.ts";
 
 function isNode(a: unknown): a is node {
@@ -62,7 +62,7 @@ export class File {
         fileVersion,
         website,
       },
-      { instrumentList, drumSetList, controlChangeMacroList, templateList }
+      { instrumentList, drumSetList, controlChangeMacroList, templateList },
     );
     return file;
   }
@@ -107,7 +107,7 @@ export class ModuleData implements Base {
       drumSetList?: DrumSetList;
       controlChangeMacroList?: ControlChangeMacroList;
       templateList?: TemplateList;
-    } = {}
+    } = {},
   ) {
     this.name = name;
     this.folder = folder;
@@ -136,11 +136,13 @@ export class ModuleData implements Base {
     if (this.fileVersion !== undefined) node["@FileVersion"] = this.fileVersion;
     if (this.website !== undefined) node["@WebSite"] = this.website;
 
-    if (this.instrumentList !== undefined)
+    if (this.instrumentList !== undefined) {
       node.InstrumentList = this.instrumentList.toXMLNode();
+    }
     if (this.drumSetList) node.DrumSetList = this.drumSetList.toXMLNode();
-    if (this.controlChangeMacroList)
+    if (this.controlChangeMacroList) {
       node.ControlChangeMacroList = this.controlChangeMacroList.toXMLNode();
+    }
     if (this.templateList) node.TemplateList = this.templateList.toXMLNode();
 
     return node;
@@ -159,45 +161,47 @@ export class ModuleData implements Base {
       ControlChangeMacroList: controlChangeMacroList_,
       TemplateList: templateList_,
     } = node;
-    if (typeof name !== "string")
+
+    if (name === undefined) {
       throw new DominoError("Invalid XML: Not found ModuleData Name");
-    if (folder !== undefined && typeof folder !== "string")
-      throw new DominoError("Invalid XML: Not found ModuleData Folder");
-    if (priority !== undefined && typeof priority !== "number")
-      throw new DominoError("Invalid XML: Not found ModuleData Priority");
-    if (fileCreator !== undefined && typeof fileCreator !== "string")
-      throw new DominoError("Invalid XML: Not found ModuleData FileCreator");
-    if (fileVersion !== undefined && typeof fileVersion !== "string")
-      throw new DominoError("Invalid XML: Not found ModuleData FileVersion");
-    if (website !== undefined && typeof website !== "string")
-      throw new DominoError("Invalid XML: Not found ModuleData Website");
+    }
+    const param: ConstructorParameters<typeof this>[0] = { name: String(name) };
+
+    if (folder !== undefined) param.folder = String(folder);
+    if (priority !== undefined) {
+      if (typeof priority !== "number") {
+        throw new DominoError("Invalid XML: Not found ModuleData Priority");
+      } else param.priority = priority;
+    }
+    if (fileCreator !== undefined) param.fileCreator = String(fileCreator);
+    if (fileVersion !== undefined) param.fileVersion = String(fileVersion);
+    if (website !== undefined) param.website = String(website);
 
     let instrumentList;
-    if (instrumentList_ === null || isNode(instrumentList_))
+    if (instrumentList_ === null || isNode(instrumentList_)) {
       instrumentList = InstrumentList.fromXMLNode(instrumentList_);
+    }
     let drumSetList;
-    if (drumSetList_ === null || isNode(drumSetList_))
+    if (drumSetList_ === null || isNode(drumSetList_)) {
       drumSetList = DrumSetList.fromXMLNode(drumSetList_);
+    }
     let controlChangeMacroList;
-    if (controlChangeMacroList_ === null || isNode(controlChangeMacroList_))
+    if (controlChangeMacroList_ === null || isNode(controlChangeMacroList_)) {
       controlChangeMacroList = ControlChangeMacroList.fromXMLNode(
-        controlChangeMacroList_
+        controlChangeMacroList_,
       );
+    }
     let templateList;
-    if (templateList_ === null || isNode(templateList_))
+    if (templateList_ === null || isNode(templateList_)) {
       templateList = TemplateList.fromXMLNode(templateList_);
+    }
 
-    const moduleData = new ModuleData(
-      {
-        name,
-        folder,
-        priority,
-        fileCreator,
-        fileVersion,
-        website,
-      },
-      { instrumentList, drumSetList, controlChangeMacroList, templateList }
-    );
+    const moduleData = new ModuleData(param, {
+      instrumentList,
+      drumSetList,
+      controlChangeMacroList,
+      templateList,
+    });
     return moduleData;
   }
 }
@@ -370,15 +374,16 @@ class Map<T extends Bank> {
   protected static fromXMLNodeBase(node: node) {
     const { "@Name": name, PC: pc_ } = node;
 
-    if (typeof name !== "string")
-      throw new DominoError("Invalid XML: Not found Map Name");
+    if (name === undefined) {
+      throw new DominoError("Invalid XML: Not Found Map Name");
+    }
 
     let pcNodes = [];
     if (pc_) {
       if (Array.isArray(pc_)) pcNodes = pc_;
       else pcNodes = [pc_];
     }
-    return { name, pcNodes };
+    return { name: String(name), pcNodes };
   }
 }
 
@@ -413,7 +418,7 @@ class PC<T extends Bank> {
   check() {
     if (this.pc < 1 || this.pc > 128) {
       throw new DominoError(
-        `PC must be between 1 and 128. Received: ${this.pc},${this.name}`
+        `PC must be between 1 and 128. Received: ${this.pc},${this.name}`,
       );
     }
   }
@@ -432,19 +437,21 @@ class PC<T extends Bank> {
   protected static fromXMLNodeBase(node: node) {
     const { "@Name": name, "@PC": pc, Bank: bank_ } = node;
 
-    if (typeof name !== "string")
-      throw new DominoError("Invalid XML: Not found PC Name");
-
-    if (typeof pc !== "number")
+    if (name === undefined) {
+      throw new DominoError("Invalid XML: Not Found PC Name");
+    }
+    if (typeof pc !== "number") {
       throw new DominoError("Invalid XML: Not found PC");
+    }
 
     let bankNodes;
     if (Array.isArray(bank_)) bankNodes = bank_;
     else if (bank_) bankNodes = [bank_];
-    if (bankNodes === undefined)
+    if (bankNodes === undefined) {
       throw new DominoError("Invalid XML: Not found Bank");
+    }
 
-    return { name, pc, bankNodes };
+    return { name: String(name), pc, bankNodes };
   }
 }
 
@@ -453,7 +460,7 @@ export class InstrumentPC extends PC<Bank> implements Base {
     const { name, pc, bankNodes } = this.fromXMLNodeBase(node);
     const banks = bankNodes.map((bank) => Bank.fromXMLNode(bank)) as [
       Bank,
-      ...Bank[]
+      ...Bank[],
     ];
 
     const pc_ = new this(name, pc, banks);
@@ -465,7 +472,7 @@ export class DrumPC extends PC<DrumBank> implements Base {
     const { name, pc, bankNodes } = this.fromXMLNodeBase(node);
     const banks = bankNodes.map((bank) => DrumBank.fromXMLNode(bank)) as [
       DrumBank,
-      ...DrumBank[]
+      ...DrumBank[],
     ];
 
     const pc_ = new this(name, pc, banks);
@@ -488,14 +495,14 @@ export class Bank implements Base {
     if (this.lsb !== undefined) {
       if (this.lsb < 0 || this.lsb > 255) {
         throw new DominoError(
-          `LSB must be between 0 and 255. Received: ${this.lsb}`
+          `LSB must be between 0 and 255. Received: ${this.lsb}`,
         );
       }
     }
     if (this.msb !== undefined) {
       if (this.msb < 0 || this.msb > 255) {
         throw new DominoError(
-          `MSB must be between 0 and 255. Received: ${this.msb}`
+          `MSB must be between 0 and 255. Received: ${this.msb}`,
         );
       }
     }
@@ -514,16 +521,19 @@ export class Bank implements Base {
   protected static fromXMLNodeBase(node: node) {
     const { "@Name": name, "@LSB": lsb, "@MSB": msb } = node;
 
-    if (typeof name !== "string")
-      throw new DominoError("Invalid XML: Not found Bank Name");
+    if (name === undefined) {
+      throw new DominoError("Invalid XML: Not found Name");
+    }
 
-    if (lsb !== undefined && typeof lsb !== "number")
+    if (lsb !== undefined && typeof lsb !== "number") {
       throw new DominoError("Invalid XML: Not found Bank LSB");
+    }
 
-    if (msb !== undefined && typeof msb !== "number")
+    if (msb !== undefined && typeof msb !== "number") {
       throw new DominoError("Invalid XML: Not found Bank MSB");
+    }
 
-    return { name, lsb, msb };
+    return { name: String(name), lsb, msb };
   }
 
   static fromXMLNode(node: node) {
@@ -577,7 +587,7 @@ export class Tone implements Base {
   check() {
     if (this.key < 0 || this.key > 127) {
       throw new DominoError(
-        `Key must be between 0 and 127. Received: ${this.key}`
+        `Key must be between 0 and 127. Received: ${this.key}`,
       );
     }
   }
@@ -594,12 +604,14 @@ export class Tone implements Base {
   static fromXMLNode(node: node) {
     const { "@Name": name, "@Key": key } = node;
 
-    if (typeof name !== "string")
+    if (name === undefined) {
       throw new DominoError("Invalid XML: Not found Tone Name");
-    if (typeof key !== "number")
+    }
+    if (typeof key !== "number") {
       throw new DominoError("Invalid XML: Not found Tone Key");
+    }
 
-    const tone = new this(name, key);
+    const tone = new this(String(name), key);
     return tone;
   }
 }
@@ -613,7 +625,7 @@ export class CCMFolder implements Base {
 
   constructor(
     param: typeof CCMFolder.prototype.param,
-    tags?: typeof CCMFolder.prototype.tags
+    tags?: typeof CCMFolder.prototype.tags,
   ) {
     this.param = param;
     this.tags = tags || [];
@@ -651,13 +663,16 @@ export class CCMFolder implements Base {
       CCM: ccms_,
       Table: tables_,
     } = node;
-    if (typeof name !== "string")
+    if (name === undefined) {
       throw new DominoError("Invalid XML: Not found Folder Name");
-    const param: ConstructorParameters<typeof CCMFolder>[0] = { name };
+    }
+    const param: ConstructorParameters<typeof CCMFolder>[0] = {
+      name: String(name),
+    };
     if (id !== undefined) {
-      if (typeof id !== "number")
+      if (typeof id !== "number") {
         throw new DominoError("Invalid XML: Not found Folder ID");
-      else param.id = id;
+      } else param.id = id;
     }
 
     const tags: ConstructorParameters<typeof this>[1] = [];
@@ -688,7 +703,7 @@ export class CCM implements Base {
     id: number;
     name: string;
     color?: string;
-    sync?: "Last" | "LastEachGame";
+    sync?: "Last" | "LastEachGate";
   };
 
   private value?: Value;
@@ -708,7 +723,7 @@ export class CCM implements Base {
       gate?: Gate;
       data?: Data;
       memo?: string;
-    } = {}
+    } = {},
   ) {
     this.param = param;
 
@@ -720,12 +735,12 @@ export class CCM implements Base {
   check() {
     if (this.param.id < 0 || this.param.id > 1300) {
       throw new DominoError(
-        `CCM ID must be between 0 and 1300. Received: ${this.param.id}`
+        `CCM ID must be between 0 and 1300. Received: ${this.param.id}`,
       );
     }
     if (this.param.color?.startsWith("#") === false) {
       throw new DominoError(
-        `CCM Color must start with #. Received: ${this.param.color}`
+        `CCM Color must start with #. Received: ${this.param.color}`,
       );
     }
   }
@@ -759,31 +774,39 @@ export class CCM implements Base {
       Data: data_,
     } = node;
 
-    if (typeof id !== "number")
+    if (typeof id !== "number") {
       throw new DominoError("Invalid XML: Not found CCM ID");
-    if (typeof name !== "string")
+    }
+    if (name === undefined) {
       throw new DominoError("Invalid XML: Not found CCM Name");
-    const param: ConstructorParameters<typeof this>[0] = { id, name };
+    }
+    const param: ConstructorParameters<typeof this>[0] = {
+      id,
+      name: String(name),
+    };
 
     if (color !== undefined) {
-      if (typeof color !== "string")
+      if (typeof color !== "string") {
         throw new DominoError("Invalid XML: Not found CCM Color");
-      else param.color = color;
+      } else param.color = color;
     }
     if (sync !== undefined) {
-      if (sync !== "Last" && sync !== "LastEachGame")
+      if (sync !== "Last" && sync !== "LastEachGate") {
         throw new DominoError("Invalid XML: Not found CCM Sync");
-      else param.sync = sync;
+      } else param.sync = sync;
     }
 
     const tags: ConstructorParameters<typeof this>[1] = {};
-    if (value_ !== undefined && isNode(value_))
+    if (value_ !== undefined && isNode(value_)) {
       tags.value = Value.fromXMLNode(value_);
-    if (gate_ !== undefined && isNode(gate_))
+    }
+    if (gate_ !== undefined && isNode(gate_)) {
       tags.gate = Gate.fromXMLNode(gate_);
+    }
     if (memo !== undefined && typeof memo === "string") tags.memo = memo;
-    if (data_ !== undefined && typeof data_ === "string")
+    if (data_ !== undefined && typeof data_ === "string") {
       tags.data = Data.fromXMLNode(data_);
+    }
 
     const ccm = new this(param, tags);
     return ccm;
@@ -815,7 +838,7 @@ export class Value implements Base {
         (max !== undefined && tag.param.value > max)
       ) {
         throw new DominoError(
-          `Entry Value must be between ${min} and ${max}. Received ${tag.param.value}`
+          `Entry Value must be between ${min} and ${max}. Received ${tag.param.value}`,
         );
       }
     });
@@ -852,39 +875,37 @@ export class Value implements Base {
 
     const param: ConstructorParameters<typeof this>[0] = {};
     if (defaultValue !== undefined) {
-      if (typeof defaultValue !== "number")
+      if (typeof defaultValue !== "number") {
         throw new DominoError("Invalid XML: Not found Value Default");
-      else param.default = defaultValue;
+      } else param.default = defaultValue;
     }
     if (min !== undefined) {
-      if (typeof min !== "number")
+      if (typeof min !== "number") {
         throw new DominoError("Invalid XML: Not found Value Min");
-      else param.min = min;
+      } else param.min = min;
     }
     if (max !== undefined) {
-      if (typeof max !== "number")
+      if (typeof max !== "number") {
         throw new DominoError("Invalid XML: Not found Value Max");
-      else param.max = max;
+      } else param.max = max;
     }
     if (offset !== undefined) {
-      if (typeof offset !== "number")
+      if (typeof offset !== "number") {
         throw new DominoError("Invalid XML: Not found Value Offset");
-      else param.offset = offset;
+      } else param.offset = offset;
     }
     if (name !== undefined) {
-      if (typeof name !== "string")
-        throw new DominoError("Invalid XML: Not found Value Name");
-      else param.name = name;
+      param.name = String(name);
     }
     if (type !== undefined) {
-      if (type !== "Key")
+      if (type !== "Key") {
         throw new DominoError("Invalid XML: Not found Value Type");
-      else param.type = type;
+      } else param.type = type;
     }
     if (tableId !== undefined) {
-      if (typeof tableId !== "number")
+      if (typeof tableId !== "number") {
         throw new DominoError("Invalid XML: Not found Value TableID");
-      else param.tableId = tableId;
+      } else param.tableId = tableId;
     }
 
     const entries: Entry[] = [];
@@ -925,12 +946,14 @@ export class Entry implements Base {
   static fromXMLNode(node: node) {
     const { "@Label": label, "@Value": value } = node;
 
-    if (label === undefined || typeof label !== "string")
+    if (label === undefined) {
       throw new DominoError("Invalid XML: Not found Entry Label");
-    if (value === undefined || typeof value !== "number")
+    }
+    if (value === undefined || typeof value !== "number") {
       throw new DominoError("Invalid XML: Not found Entry Value");
+    }
 
-    const entry = new this({ label, value });
+    const entry = new this({ label: String(label), value });
     return entry;
   }
 }
@@ -947,7 +970,7 @@ export class Table implements Base {
   check() {
     if (this.param.id < 0) {
       throw new DominoError(
-        `Table ID must be 0 or more. Received: ${this.param.id}`
+        `Table ID must be 0 or more. Received: ${this.param.id}`,
       );
     }
   }
@@ -964,8 +987,9 @@ export class Table implements Base {
   static fromXMLNode(node: node) {
     const { "@ID": id, Entry: entries_ } = node;
 
-    if (id === undefined || typeof id !== "number")
+    if (id === undefined || typeof id !== "number") {
       throw new DominoError("Invalid XML: Not found Table ID");
+    }
 
     let tags: ConstructorParameters<typeof this>[1];
     if (isNode(entries_)) {
@@ -1005,7 +1029,7 @@ export class TemplateFolder implements Base {
 
   constructor(
     param: typeof TemplateFolder.prototype.param,
-    tags?: typeof TemplateFolder.prototype.tags
+    tags?: typeof TemplateFolder.prototype.tags,
   ) {
     this.param = param;
     this.tags = tags || [];
@@ -1026,8 +1050,9 @@ export class TemplateFolder implements Base {
   static fromXMLNode(node: node) {
     const { "@Name": name, Template: tags_ } = node;
 
-    if (name === undefined || typeof name !== "string")
+    if (name === undefined) {
       throw new DominoError("Invalid XML: Not found Folder Name");
+    }
 
     const tags: Template[] = [];
     if (isNode(tags_)) {
@@ -1036,7 +1061,7 @@ export class TemplateFolder implements Base {
       });
     }
 
-    const folder = new this({ name }, tags);
+    const folder = new this({ name: String(name) }, tags);
     return folder;
   }
 }
@@ -1047,7 +1072,7 @@ export class Template implements Base {
 
   constructor(
     param: typeof Template.prototype.param,
-    tags?: typeof Template.prototype.tags
+    tags?: typeof Template.prototype.tags,
   ) {
     this.param = param;
     this.tags = tags || [];
@@ -1056,7 +1081,7 @@ export class Template implements Base {
   check() {
     if (this.param.id !== undefined && this.param.id < 0) {
       throw new DominoError(
-        `Template ID must be 0 or more. Received: ${this.param.id}`
+        `Template ID must be 0 or more. Received: ${this.param.id}`,
       );
     }
   }
@@ -1079,13 +1104,16 @@ export class Template implements Base {
   static fromXMLNode(node: node) {
     const { "@Name": name, "@ID": id, CC: ccs_ } = node;
 
-    if (name === undefined || typeof name !== "string")
+    if (name === undefined) {
       throw new DominoError("Invalid XML: Not found Template Name");
-    const params: ConstructorParameters<typeof this>[0] = { name };
+    }
+    const params: ConstructorParameters<typeof this>[0] = {
+      name: String(name),
+    };
     if (id !== undefined) {
-      if (typeof id !== "number")
+      if (typeof id !== "number") {
         throw new DominoError("Invalid XML: Not found Template ID");
-      else params.id = id;
+      } else params.id = id;
     }
 
     const tags: ConstructorParameters<typeof this>[1] = [];
@@ -1123,21 +1151,22 @@ export class CC implements Base {
   static fromXMLNode(node: node) {
     const { "@ID": id, "@Value": value, "@Gate": gate } = node;
 
-    if (id === undefined || typeof id !== "number")
+    if (id === undefined || typeof id !== "number") {
       throw new DominoError("Invalid XML: Not found CC ID");
+    }
 
     const params: ConstructorParameters<typeof this>[0] = {
       id,
     };
     if (value !== undefined) {
-      if (typeof value !== "number")
+      if (typeof value !== "number") {
         throw new DominoError("Invalid XML: Not found CC Value");
-      else params.value = value;
+      } else params.value = value;
     }
     if (gate !== undefined) {
-      if (typeof gate !== "number")
+      if (typeof gate !== "number") {
         throw new DominoError("Invalid XML: Not found CC Gate");
-      else params.gate = gate;
+      } else params.gate = gate;
     }
 
     const cc = new this(params);

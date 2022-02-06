@@ -1,0 +1,35 @@
+name: Deno Test
+
+on: [push,pull_request,workflow_call]
+
+jobs:
+  check:
+    uses: kamekyame/gh-actions-test/.github/workflows/dfl-check.yml@main
+  test:
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.x
+      - name: Install unar
+        run: |
+          sudo apt-get update
+          sudo apt-get install unar
+      - name: Download sample XML file
+        run: |
+          wget https://takabosoft.com/download/win/domino/Domino144.zip
+          unar Domino144.zip
+          cp -r Domino144/Module/ ./test/sample-files/
+          rm ./test/sample-files/ok_XG2k.xml
+      - name: Run test
+        run: |
+          deno test -A --coverage=./test/coverage
+      - name: Create coverage report
+        run: deno coverage ./test/coverage --lcov > ./test/coverage.lcov
+      - name: Codecov
+        uses: codecov/codecov-action@v2
+        with:
+          files: ./test/coverage.lcov
+          fail_ci_if_error: true

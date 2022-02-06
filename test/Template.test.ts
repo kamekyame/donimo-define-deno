@@ -21,7 +21,7 @@ Deno.test({
   fn: () => {
     const fileStr = `<?xml version="1.0" encoding="Shift_JIS"?>
     <ModuleData Name="test"><TemplateList>
-    <Template Name="0">
+    <Template Dummy="aaa">
     </Template>
   </TemplateList></ModuleData>`;
     assertThrows(() => {

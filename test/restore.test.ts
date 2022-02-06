@@ -39,7 +39,7 @@ Deno.test({
         type: "Key",
         tableId: 0,
       },
-      entries
+      entries,
     );
     const gate = new Domino.Gate(
       {
@@ -51,7 +51,7 @@ Deno.test({
         type: "Key",
         tableId: 0,
       },
-      entries
+      entries,
     );
     const data = new Domino.Data("test-data");
 
@@ -71,7 +71,7 @@ Deno.test({
           color: "#ff0000",
           sync: "Last",
         },
-        { value, gate, memo: "test-memo", data }
+        { value, gate, memo: "test-memo", data },
       ),
       new Domino.Table({ id: 0 }),
       new Domino.Table({ id: 0 }, entries),
@@ -100,7 +100,7 @@ Deno.test({
         fileVersion: "test",
         website: "http://example.com",
       },
-      { instrumentList, drumSetList, controlChangeMacroList, templateList }
+      { instrumentList, drumSetList, controlChangeMacroList, templateList },
     );
     const str = file.toXML();
     const restoreFile = Domino.File.fromXML(str);

@@ -44,7 +44,7 @@ Deno.test({
     <ModuleData Name="test"><InstrumentList>
     <Map Name="test-map">
       <PC Name="piano" PC="1">
-        <Bank Name="0"/>
+        <Bank Dummy="aaa"/>
       </PC>
     </Map>
     </InstrumentList></ModuleData>`;
