@@ -13,6 +13,10 @@ jobs:
       - uses: denoland/setup-deno@v1
         with:
           deno-version: v1.x
+      - name: Install unar
+        run: |
+          apt-get update
+          apt-get install unar
       - name: Download sample XML file
         run: |
           wget https://takabosoft.com/download/win/domino/Domino144.zip
