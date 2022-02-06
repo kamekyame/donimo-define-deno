@@ -15,8 +15,8 @@ jobs:
           deno-version: v1.x
       - name: Install unar
         run: |
-          apt-get update
-          apt-get install unar
+          sudo apt-get update
+          sudo apt-get install unar
       - name: Download sample XML file
         run: |
           wget https://takabosoft.com/download/win/domino/Domino144.zip
