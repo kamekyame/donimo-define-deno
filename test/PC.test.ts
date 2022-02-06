@@ -25,7 +25,7 @@ Deno.test({
     const fileStr = `<?xml version="1.0" encoding="Shift_JIS"?>
     <ModuleData Name="test"><InstrumentList>
     <Map Name="test-map">
-      <PC Name="0" PC="0">
+      <PC PC="0">
         <Bank Name="piano"/>
       </PC>
     </Map>
@@ -37,7 +37,7 @@ Deno.test({
 });
 
 Deno.test({
-  name: "[PC] Invalid Name",
+  name: "[PC] Invalid PC",
   fn: () => {
     const fileStr = `<?xml version="1.0" encoding="Shift_JIS"?>
     <ModuleData Name="test"><InstrumentList>

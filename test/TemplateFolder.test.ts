@@ -6,7 +6,7 @@ Deno.test({
   fn: () => {
     const fileStr = `<?xml version="1.0" encoding="Shift_JIS"?>
     <ModuleData Name="test"><TemplateList>
-    <Folder Name="0">
+    <Folder Dummy="aaa">
     </Folder>
   </TemplateList></ModuleData>`;
 

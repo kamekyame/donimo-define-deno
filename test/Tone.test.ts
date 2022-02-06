@@ -30,7 +30,7 @@ Deno.test({
     <Map Name="test-drummap2">
       <PC Name="drum" PC="1">
         <Bank Name="drum2" LSB="0" MSB="0">
-          <Tone Name="0" Key="0"/>
+          <Tone Key="0"/>
         </Bank>
       </PC>
     </Map>
