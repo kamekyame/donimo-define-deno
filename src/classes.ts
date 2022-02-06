@@ -29,13 +29,11 @@ export class File {
       ModuleData: this.moduleData.toXMLNode(),
     };
     const str = stringify(doc);
-    console.log("File toXML", str);
     return str;
   }
 
   static fromXML(xml: string) {
     const doc = parse(xml);
-    console.log("File fromXML", doc);
     if (!isNode(doc.xml)) throw new DominoError("Invalid XML");
     if (doc.xml["@encoding"] !== "Shift_JIS") {
       throw new DominoError("Invalid encoding");
@@ -138,7 +136,6 @@ export class ModuleData implements Base {
     if (this.fileVersion !== undefined) node["@FileVersion"] = this.fileVersion;
     if (this.website !== undefined) node["@WebSite"] = this.website;
 
-    console.log(this.instrumentList?.toXMLNode());
     if (this.instrumentList !== undefined)
       node.InstrumentList = this.instrumentList.toXMLNode();
     if (this.drumSetList) node.DrumSetList = this.drumSetList.toXMLNode();
@@ -150,7 +147,6 @@ export class ModuleData implements Base {
   }
 
   static fromXMLNode(node: node) {
-    console.log("ModuleData fromXMLNode", node);
     const {
       "@Name": name,
       "@Folder": folder,
@@ -217,7 +213,6 @@ export class MapList<T extends InstrumentMap | DrumMap> {
 
   toXMLNode() {
     this.check();
-    console.log("MapList toXMLNode", this.maps);
     const node: unode = {};
     if (this.maps.length > 0) {
       node.Map = this.maps.map((map) => map.toXMLNode());
@@ -240,7 +235,6 @@ export class InstrumentList extends MapList<InstrumentMap> implements Base {
   static fromXMLNode(node: node | null) {
     const { mapNodes } = this.fromXMLNodeBase(node);
     const maps = mapNodes.map((mapNode) => InstrumentMap.fromXMLNode(mapNode));
-    console.log(maps);
     const instrumentList = new this(maps);
     return instrumentList;
   }
@@ -250,7 +244,6 @@ export class DrumSetList extends MapList<DrumMap> implements Base {
   static fromXMLNode(node: node | null) {
     const { mapNodes } = this.fromXMLNodeBase(node);
     const maps = mapNodes.map((mapNode) => DrumMap.fromXMLNode(mapNode));
-    console.log(maps);
     const instrumentList = new this(maps);
     return instrumentList;
   }
@@ -432,7 +425,6 @@ class PC<T extends Bank> {
       "@PC": this.pc,
       Bank: this.banks.map((bank) => bank.toXMLNode()),
     };
-    console.log("PC toXMLNode", node);
 
     return node;
   }
@@ -493,10 +485,8 @@ export class Bank implements Base {
   }
 
   check() {
-    console.log("check", this.name, this.lsb, this.msb);
     if (this.lsb !== undefined) {
       if (this.lsb < 0 || this.lsb > 255) {
-        console.log("lsb", this.lsb);
         throw new DominoError(
           `LSB must be between 0 and 255. Received: ${this.lsb}`
         );
@@ -650,7 +640,6 @@ export class CCMFolder implements Base {
     };
     if (this.param.id !== undefined) node["@ID"] = this.param.id;
 
-    console.log("CCMFolder toXMLNode", node);
     return node;
   }
 

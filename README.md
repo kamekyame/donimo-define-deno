@@ -58,23 +58,6 @@ const file = Domino.File.fromXML(str);
 console.log(file);
 
 // console output
-// File fromXML {
-//   xml: { "@version": 1, "@encoding": "Shift_JIS" },
-//   ModuleData: { "@Name": "sample", InstrumentList: { Map: { "@Name": "Map", PC: [Array] } } }
-// }
-// ModuleData fromXMLNode {
-//   "@Name": "sample",
-//   InstrumentList: { Map: { "@Name": "Map", PC: [ [Object], [Object] ] } }
-// }
-// [
-//   InstrumentMap {
-//     name: "Map",
-//     pcs: [
-//       InstrumentPC { name: "Piano", pc: 1, banks: [Array] },
-//       InstrumentPC { name: "Guitar", pc: 2, banks: [Array] }
-//     ]
-//   }
-// ]
 // File {
 //   xmlVersion: "1.0",
 //   xmlEncoding: "Shift_JIS",
