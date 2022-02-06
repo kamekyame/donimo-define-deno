@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="Shift_JIS"?>
+<ModuleData Name="sample">
+  <InstrumentList>
+    <Map Name="Map">
+      <PC Name="Piano" PC="1">
+        <Bank Name="GrandPiano"/>
+        <Bank Name="BrightPiano"/>
+      </PC>
+      <PC Name="Guitar" PC="2">
+        <Bank Name="AcousticGuitar"/>
+      </PC>
+    </Map>
+  </InstrumentList>
+</ModuleData>
