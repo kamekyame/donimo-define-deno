@@ -207,7 +207,7 @@ export class ModuleData implements Base {
 }
 
 export class MapList<T extends InstrumentMap | DrumMap> {
-  private maps: T[];
+  public maps: T[];
 
   constructor(maps?: T[]) {
     this.maps = maps || [];
@@ -308,7 +308,7 @@ export class ControlChangeMacroList implements Base {
 }
 
 export class TemplateList implements Base {
-  private tags: (TemplateFolder | Template)[];
+  public tags: (TemplateFolder | Template)[];
 
   constructor(tags?: typeof TemplateList.prototype.tags) {
     this.tags = tags || [];
@@ -578,8 +578,8 @@ export class DrumBank extends Bank {
 }
 
 export class Tone implements Base {
-  private name: string;
-  private key: number;
+  public name: string;
+  public key: number;
 
   constructor(name: string, key: number) {
     this.name = name;
@@ -619,11 +619,11 @@ export class Tone implements Base {
 }
 
 export class CCMFolder implements Base {
-  private param: {
+  public param: {
     name: string;
     id?: number;
   };
-  private tags: (CCMFolder | CCM | Table)[];
+  public tags: (CCMFolder | CCM | Table)[];
 
   constructor(
     param: typeof CCMFolder.prototype.param,
@@ -701,17 +701,17 @@ export class CCMFolder implements Base {
 }
 
 export class CCM implements Base {
-  private param: {
+  public param: {
     id: number;
     name: string;
     color?: string;
     sync?: "Last" | "LastEachGate";
   };
 
-  private value?: Value;
-  private gate?: Gate;
-  private data?: Data;
-  private memo?: string;
+  public value?: Value;
+  public gate?: Gate;
+  public data?: Data;
+  public memo?: string;
 
   constructor(
     param: typeof CCM.prototype.param,
@@ -825,7 +825,7 @@ export class Value implements Base {
     type?: "Key";
     tableId?: number;
   };
-  private tags?: Entry[];
+  public tags?: Entry[];
 
   constructor(param: typeof Value.prototype.param = {}, tags?: Entry[]) {
     this.param = param;
@@ -1004,7 +1004,7 @@ export class Table implements Base {
 }
 
 export class Data implements Base {
-  private text: string;
+  public text: string;
   constructor(text: string) {
     this.text = text;
   }
@@ -1024,10 +1024,10 @@ export class Data implements Base {
 }
 
 export class TemplateFolder implements Base {
-  private param: {
+  public param: {
     name: string;
   };
-  private tags: Template[];
+  public tags: Template[];
 
   constructor(
     param: typeof TemplateFolder.prototype.param,
