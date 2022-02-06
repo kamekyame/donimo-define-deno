@@ -688,7 +688,7 @@ export class CCM implements Base {
     id: number;
     name: string;
     color?: string;
-    sync?: "Last" | "LastEachGame";
+    sync?: "Last" | "LastEachGate";
   };
 
   private value?: Value;
@@ -771,7 +771,7 @@ export class CCM implements Base {
       else param.color = color;
     }
     if (sync !== undefined) {
-      if (sync !== "Last" && sync !== "LastEachGame")
+      if (sync !== "Last" && sync !== "LastEachGate")
         throw new DominoError("Invalid XML: Not found CCM Sync");
       else param.sync = sync;
     }
