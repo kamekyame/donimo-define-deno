@@ -556,7 +556,9 @@ export class DrumBank extends Bank {
   toXMLNode() {
     this.check();
     const node = super.toXMLNode();
-    node.Tone = this.tones.map((tone) => tone.toXMLNode());
+    if (this.tones.length > 0) {
+      node.Tone = this.tones.map((tone) => tone.toXMLNode());
+    }
     return node;
   }
 
