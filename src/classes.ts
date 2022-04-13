@@ -1,4 +1,4 @@
-import { node, parse, stringify, unode } from "../deps.ts";
+import { log, node, parse, stringify, unode } from "../deps.ts";
 import { DominoError } from "./util.ts";
 
 function isNode(a: unknown): a is node {
@@ -122,7 +122,84 @@ export class ModuleData implements Base {
     this.templateList = templateList;
   }
 
-  check() {}
+  check() {
+    function flatFn(
+      tag: CCMFolder | CCM | CCMLink | CCMFolderLink | Table,
+    ): Array<CCMFolder | CCM | CCMLink | CCMFolderLink | Table> {
+      if (tag instanceof CCMFolder) return [tag, ...tag.tags.flatMap(flatFn)];
+      else return [tag];
+    }
+    function sortFn(a: CCMFolder | CCM | Table, b: CCMFolder | CCM | Table) {
+      return (a.param.id ?? Infinity) - (b.param.id ?? Infinity);
+    }
+    function checkDuplicate(list: CCMFolder[] | CCM[] | Table[]) {
+      let prevId = -1;
+      list.forEach((tag) => {
+        if (tag.param.id === undefined) return;
+        if (tag.param.id === prevId) {
+          let type: string;
+          if (tag instanceof CCMFolder) type = "Folder";
+          else if (tag instanceof CCM) type = "CCM";
+          else type = "Table";
+          log.error(`Duplicate ${type} tag ID: ${tag.param.id}`);
+        }
+        prevId = tag.param.id;
+      });
+    }
+    function outputUsedId(list: CCMFolder[] | CCM[] | Table[]) {
+      if (list.length === 0) return;
+      if (list[0].param.id === undefined) return;
+      let str = "";
+
+      for (let i = 0; i < list.length; i++) {
+        const start = list[i].param.id;
+        if (start === undefined) break;
+        let end: number | undefined;
+        for (i++; i < list.length; i++) {
+          const prev = list[i - 1].param.id as number;
+          const next = list[i].param.id;
+          if (next === undefined || next - prev >= 2) {
+            i--;
+            break;
+          }
+          end = next;
+        }
+        if (end === undefined || start === end) str += `${start} `;
+        else str += `${start}-${end} `;
+      }
+      let type: string;
+      if (list[0] instanceof CCMFolder) type = "Folder";
+      else if (list[0] instanceof CCM) type = "CCM";
+      else type = "Table";
+      log.info(`Used Ids (${type}): ${str}`);
+    }
+
+    const ccmFlatList = this.controlChangeMacroList?.tags.flatMap(flatFn);
+    const ccm: CCM[] = [];
+    const ccmFolder: CCMFolder[] = [];
+    const ccmLink: CCMLink[] = [];
+    const ccmFolderLink: CCMFolderLink[] = [];
+    const table: Table[] = [];
+    ccmFlatList?.forEach((tag) => {
+      if (tag instanceof CCM) ccm.push(tag);
+      else if (tag instanceof CCMFolder) ccmFolder.push(tag);
+      else if (tag instanceof CCMLink) ccmLink.push(tag);
+      else if (tag instanceof CCMFolderLink) ccmFolderLink.push(tag);
+      else if (tag instanceof Table) table.push(tag);
+    });
+
+    ccm.sort(sortFn);
+    ccmFolder.sort(sortFn);
+    table.sort(sortFn);
+
+    checkDuplicate(ccm);
+    checkDuplicate(ccmFolder);
+    checkDuplicate(table);
+
+    outputUsedId(ccm);
+    outputUsedId(ccmFolder);
+    outputUsedId(table);
+  }
 
   toXMLNode() {
     this.check();
