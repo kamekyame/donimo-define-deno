@@ -202,7 +202,6 @@ export class ModuleData implements Base {
   }
 
   toXMLNode() {
-    this.check();
     const node: unode = {
       "@Name": this.name,
     };
@@ -222,6 +221,7 @@ export class ModuleData implements Base {
     }
     if (this.templateList) node.TemplateList = this.templateList.toXMLNode();
 
+    this.check();
     return node;
   }
 
