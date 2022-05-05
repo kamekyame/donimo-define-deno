@@ -1,4 +1,4 @@
-import { js2xml, Js2XmlOptions, log, xml2js } from "../deps.ts";
+import { EOL, format, js2xml, Js2XmlOptions, log, xml2js } from "../deps.ts";
 import { DominoError } from "./util.ts";
 
 type XmlJs = {
@@ -46,7 +46,8 @@ export class File {
       compact: false,
     };
     const str = js2xml(obj, op);
-    return str;
+    const formatStr = format(str, EOL.CRLF);
+    return formatStr;
   }
 
   static fromXML(xml: string) {
