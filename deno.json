@@ -1,0 +1,8 @@
+{
+  "compilerOptions": {
+    "noUncheckedIndexedAccess": true
+  },
+  "tasks": {
+    "test": "deno test -A --no-check=remote --coverage=./test/coverage"
+  }
+}
