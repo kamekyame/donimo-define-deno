@@ -1,3 +1,5 @@
+// Copyright 2022 kamekyame. All rights reserved. MIT license.
+
 import { assertThrows } from "../deps.test.ts";
 import * as Domino from "../mod.ts";
 

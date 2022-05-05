@@ -1,3 +1,5 @@
+// Copyright 2022 kamekyame. All rights reserved. MIT license.
+
 import * as Domino from "../mod.ts";
 
 const instrumentPcs = [

@@ -1,3 +1,5 @@
+// Copyright 2022 kamekyame. All rights reserved. MIT license.
+
 import { EOL, format, js2xml, Js2XmlOptions, log, xml2js } from "../deps.ts";
 import { DominoError } from "./util.ts";
 

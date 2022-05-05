@@ -1,3 +1,5 @@
+// Copyright 2022 kamekyame. All rights reserved. MIT license.
+
 import * as Domino from "../mod.ts";
 import { EOL } from "../deps.ts";
 import { assertEquals, detect } from "../deps.test.ts";
