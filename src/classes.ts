@@ -1,14 +1,23 @@
-import { log, node, parse, stringify, unode } from "../deps.ts";
+import { js2xml, Js2XmlOptions, log, xml2js } from "../deps.ts";
 import { DominoError } from "./util.ts";
 
-function isNode(a: unknown): a is node {
-  return a !== null && typeof a === "object";
-}
+type XmlJs = {
+  declaration?: { attributes: Attributes };
+  elements?: Element[];
+};
 
-function nodeToArray(node: node) {
-  if (Array.isArray(node)) return node as node[];
-  else return [node];
-}
+type Attributes = Record<string, unknown>;
+type ElementElement = {
+  type: "element";
+  name: string;
+  attributes?: Attributes;
+  elements: Element[];
+};
+type TextElement = {
+  type: "text";
+  text: string;
+};
+type Element = ElementElement | TextElement;
 
 export class File {
   public readonly xmlVersion = "1.0";
@@ -20,25 +29,40 @@ export class File {
     this.moduleData = new ModuleData(...moduleDataParam);
   }
 
-  toXML() {
-    const doc = {
-      xml: {
-        "@version": this.xmlVersion,
-        "@encoding": this.xmlEncoding,
+  toXML(options?: Js2XmlOptions) {
+    const obj: XmlJs = {
+      declaration: {
+        attributes: {
+          version: this.xmlVersion,
+          encoding: this.xmlEncoding,
+        },
       },
-      ModuleData: this.moduleData.toXMLNode(),
+      elements: [
+        this.moduleData.toXMLElement(),
+      ],
     };
-    const str = stringify(doc);
+    const op: Js2XmlOptions = {
+      ...options,
+      compact: false,
+    };
+    const str = js2xml(obj, op);
     return str;
   }
 
   static fromXML(xml: string) {
-    const doc = parse(xml);
-    if (!isNode(doc.xml)) throw new DominoError("Invalid XML");
-    if (doc.xml["@encoding"] !== "Shift_JIS") {
+    const doc = xml2js(xml, {
+      compact: false,
+      nativeTypeAttributes: true,
+      alwaysChildren: true,
+    }) as XmlJs;
+
+    if (!doc.declaration) throw new DominoError("Invalid XML");
+    if (doc.declaration.attributes.encoding !== "Shift_JIS") {
       throw new DominoError("Invalid encoding");
     }
-    if (!doc.ModuleData || !isNode(doc.ModuleData)) {
+    if (
+      !doc.elements || !doc.elements[0] || doc.elements[0].type !== "element"
+    ) {
       throw new DominoError("Invalid XML: Not found ModuleData");
     }
     const {
@@ -52,7 +76,7 @@ export class File {
       drumSetList,
       controlChangeMacroList,
       templateList,
-    } = ModuleData.fromXMLNode(doc.ModuleData);
+    } = ModuleData.fromXMLElement(doc.elements[0]);
     const file = new File(
       {
         name,
@@ -148,16 +172,16 @@ export class ModuleData implements Base {
     }
     function outputUsedId(list: CCMFolder[] | CCM[] | Table[]) {
       if (list.length === 0) return;
-      if (list[0].param.id === undefined) return;
+      if (list[0]?.param.id === undefined) return;
       let str = "";
 
       for (let i = 0; i < list.length; i++) {
-        const start = list[i].param.id;
+        const start = list[i]?.param.id;
         if (start === undefined) break;
         let end: number | undefined;
         for (i++; i < list.length; i++) {
-          const prev = list[i - 1].param.id as number;
-          const next = list[i].param.id;
+          const prev = list[i - 1]?.param.id as number;
+          const next = list[i]?.param.id;
           if (next === undefined || next - prev >= 2) {
             i--;
             break;
@@ -201,43 +225,47 @@ export class ModuleData implements Base {
     outputUsedId(table);
   }
 
-  toXMLNode() {
-    const node: unode = {
-      "@Name": this.name,
+  toXMLElement() {
+    const element: Element = {
+      type: "element",
+      name: "ModuleData",
+      attributes: {
+        "Name": this.name,
+        "Folder": this.folder,
+        "Priority": this.priority,
+        "FileCreator": this.fileCreator,
+        "FileVersion": this.fileVersion,
+        "WebSite": this.website,
+      },
+      elements: [],
     };
 
-    if (this.folder !== undefined) node["@Folder"] = this.folder;
-    if (this.priority !== undefined) node["@Priority"] = this.priority;
-    if (this.fileCreator !== undefined) node["@FileCreator"] = this.fileCreator;
-    if (this.fileVersion !== undefined) node["@FileVersion"] = this.fileVersion;
-    if (this.website !== undefined) node["@WebSite"] = this.website;
-
-    if (this.instrumentList !== undefined) {
-      node.InstrumentList = this.instrumentList.toXMLNode();
+    if (this.instrumentList) {
+      element.elements.push(this.instrumentList.toXMLElement());
     }
-    if (this.drumSetList) node.DrumSetList = this.drumSetList.toXMLNode();
+    if (this.drumSetList) {
+      element.elements.push(this.drumSetList.toXMLElement());
+    }
     if (this.controlChangeMacroList) {
-      node.ControlChangeMacroList = this.controlChangeMacroList.toXMLNode();
+      element.elements.push(this.controlChangeMacroList.toXMLElement());
     }
-    if (this.templateList) node.TemplateList = this.templateList.toXMLNode();
+    if (this.templateList) {
+      element.elements.push(this.templateList.toXMLElement());
+    }
 
     this.check();
-    return node;
+    return element;
   }
 
-  static fromXMLNode(node: node) {
+  static fromXMLElement(element: ElementElement) {
     const {
-      "@Name": name,
-      "@Folder": folder,
-      "@Priority": priority,
-      "@FileCreator": fileCreator,
-      "@FileVersion": fileVersion,
-      "@WebSite": website,
-      InstrumentList: instrumentList_,
-      DrumSetList: drumSetList_,
-      ControlChangeMacroList: controlChangeMacroList_,
-      TemplateList: templateList_,
-    } = node;
+      "Name": name,
+      "Folder": folder,
+      "Priority": priority,
+      "FileCreator": fileCreator,
+      "FileVersion": fileVersion,
+      "WebSite": website,
+    } = element.attributes || {};
 
     if (name === undefined) {
       throw new DominoError("Invalid XML: Not found ModuleData Name");
@@ -254,31 +282,38 @@ export class ModuleData implements Base {
     if (fileVersion !== undefined) param.fileVersion = String(fileVersion);
     if (website !== undefined) param.website = String(website);
 
-    let instrumentList;
-    if (instrumentList_ === null || isNode(instrumentList_)) {
-      instrumentList = InstrumentList.fromXMLNode(instrumentList_);
+    const tags: NonNullable<ConstructorParameters<typeof ModuleData>[1]> = {};
+
+    const elementElements = element.elements.filter((e) =>
+      e.type === "element"
+    ) as ElementElement[];
+
+    const instrumentList_ = elementElements.find((e) =>
+      e.name === "InstrumentList"
+    );
+    if (instrumentList_) {
+      tags.instrumentList = InstrumentList.fromXMLElement(instrumentList_);
     }
-    let drumSetList;
-    if (drumSetList_ === null || isNode(drumSetList_)) {
-      drumSetList = DrumSetList.fromXMLNode(drumSetList_);
+    const drumSetList_ = elementElements.find((e) => e.name === "DrumSetList");
+    if (drumSetList_) {
+      tags.drumSetList = DrumSetList.fromXMLElement(drumSetList_);
     }
-    let controlChangeMacroList;
-    if (controlChangeMacroList_ === null || isNode(controlChangeMacroList_)) {
-      controlChangeMacroList = ControlChangeMacroList.fromXMLNode(
+    const controlChangeMacroList_ = elementElements.find((e) =>
+      e.name === "ControlChangeMacroList"
+    );
+    if (controlChangeMacroList_) {
+      tags.controlChangeMacroList = ControlChangeMacroList.fromXMLNode(
         controlChangeMacroList_,
       );
     }
-    let templateList;
-    if (templateList_ === null || isNode(templateList_)) {
-      templateList = TemplateList.fromXMLNode(templateList_);
+    const templateList_ = elementElements.find((e) =>
+      e.name === "TemplateList"
+    );
+    if (templateList_) {
+      tags.templateList = TemplateList.fromXMLElement(templateList_);
     }
 
-    const moduleData = new ModuleData(param, {
-      instrumentList,
-      drumSetList,
-      controlChangeMacroList,
-      templateList,
-    });
+    const moduleData = new ModuleData(param, tags);
     return moduleData;
   }
 }
@@ -292,41 +327,50 @@ export class MapList<T extends InstrumentMap | DrumMap> {
 
   check() {}
 
-  toXMLNode() {
+  toXMLElement() {
     this.check();
-    const node: unode = {};
-    if (this.maps.length > 0) {
-      node.Map = this.maps.map((map) => map.toXMLNode());
-    }
-    return node;
-  }
-
-  protected static fromXMLNodeBase(node: node | null) {
-    let mapNodes = [];
-    if (node) {
-      const { Map: map_ } = node;
-      if (Array.isArray(map_)) mapNodes = map_;
-      else mapNodes = [map_];
-    }
-    return { mapNodes };
+    const element: ElementElement = {
+      type: "element",
+      name: "List",
+      elements: this.maps.map((map) => map.toXMLElement()),
+    };
+    return element;
   }
 }
 
 export class InstrumentList extends MapList<InstrumentMap> implements Base {
-  static fromXMLNode(node: node | null) {
-    const { mapNodes } = this.fromXMLNodeBase(node);
-    const maps = mapNodes.map((mapNode) => InstrumentMap.fromXMLNode(mapNode));
+  static fromXMLElement(element: ElementElement) {
+    const maps = element.elements.flatMap((e) => {
+      if (e.type === "element" && e.name === "Map") {
+        return [InstrumentMap.fromXMLElement(e)];
+      } else return [];
+    });
     const instrumentList = new this(maps);
     return instrumentList;
+  }
+
+  override toXMLElement() {
+    const element = super.toXMLElement();
+    element.name = "InstrumentList";
+    return element;
   }
 }
 
 export class DrumSetList extends MapList<DrumMap> implements Base {
-  static fromXMLNode(node: node | null) {
-    const { mapNodes } = this.fromXMLNodeBase(node);
-    const maps = mapNodes.map((mapNode) => DrumMap.fromXMLNode(mapNode));
+  static fromXMLElement(element: ElementElement) {
+    const maps = element.elements.flatMap((e) => {
+      if (e.type === "element" && e.name == "Map") {
+        return [DrumMap.fromXMLElement(e)];
+      } else return [];
+    });
     const instrumentList = new this(maps);
     return instrumentList;
+  }
+
+  override toXMLElement() {
+    const element = super.toXMLElement();
+    element.name = "DrumSetList";
+    return element;
   }
 }
 
@@ -339,70 +383,40 @@ export class ControlChangeMacroList implements Base {
 
   check() {}
 
-  toXMLNode() {
+  toXMLElement() {
     this.check();
-    const node: unode = {
-      Folder: this.tags.flatMap((tags) => {
-        if (tags instanceof CCMFolder) return [tags.toXMLNode()];
-        else return [];
-      }),
-      FolderLink: this.tags.flatMap((tags) => {
-        if (tags instanceof CCMFolderLink) return [tags.toXMLNode()];
-        else return [];
-      }),
-      CCM: this.tags.flatMap((tags) => {
-        if (tags instanceof CCM) return [tags.toXMLNode()];
-        else return [];
-      }),
-      CCMLink: this.tags.flatMap((tags) => {
-        if (tags instanceof CCMLink) return [tags.toXMLNode()];
-        else return [];
-      }),
-      Table: this.tags.flatMap((tags) => {
-        if (tags instanceof Table) return [tags.toXMLNode()];
-        else return [];
-      }),
-      //ControlChangeMacro: null, //this.tags.map((tag) => tag.toXMLNode()),
+    const element: ElementElement = {
+      type: "element",
+      name: "ControlChangeMacroList",
+      elements: this.tags.map((tag) => tag.toXMLElement()),
     };
-    return node;
+    return element;
   }
 
-  static fromXMLNode(node: node | null) {
+  static fromXMLNode(element: ElementElement) {
     const tags: ControlChangeMacroList["tags"] = [];
-    if (node) {
-      const {
-        Folder: folders_,
-        FolderLink: folderLinks_,
-        CCM: ccms_,
-        CCMLink: ccmlinks_,
-        Table: tables_,
-      } = node;
-      if (isNode(folders_)) {
-        nodeToArray(folders_).forEach((folderNode) => {
-          tags.push(CCMFolder.fromXMLNode(folderNode));
-        });
-      }
-      if (isNode(folderLinks_)) {
-        nodeToArray(folderLinks_).forEach((folderLinkNode) => {
-          tags.push(CCMFolderLink.fromXMLNode(folderLinkNode));
-        });
-      }
-      if (isNode(ccms_)) {
-        nodeToArray(ccms_).forEach((ccmNode) => {
-          tags.push(CCM.fromXMLNode(ccmNode));
-        });
-      }
-      if (isNode(ccmlinks_)) {
-        nodeToArray(ccmlinks_).forEach((ccmlinkNode) => {
-          tags.push(CCMLink.fromXMLNode(ccmlinkNode));
-        });
-      }
-      if (isNode(tables_)) {
-        nodeToArray(tables_).forEach((tableNode) => {
-          tags.push(Table.fromXMLNode(tableNode));
-        });
-      }
-    }
+    element.elements.forEach(
+      (e) => {
+        if (e.type !== "element") return;
+        switch (e.name) {
+          case "Folder":
+            tags.push(CCMFolder.fromXMLElement(e));
+            break;
+          case "FolderLink":
+            tags.push(CCMFolderLink.fromXMLElement(e));
+            break;
+          case "CCM":
+            tags.push(CCM.fromXMLElement(e));
+            break;
+          case "CCMLink":
+            tags.push(CCMLink.fromXMLElement(e));
+            break;
+          case "Table":
+            tags.push(Table.fromXMLElement(e));
+            break;
+        }
+      },
+    );
     const controlChangeMacroList = new this(tags);
     return controlChangeMacroList;
   }
@@ -417,37 +431,30 @@ export class TemplateList implements Base {
 
   check() {}
 
-  toXMLNode() {
+  toXMLElement() {
     this.check();
-    const node: unode = {
-      Folder: this.tags.flatMap((tags) => {
-        if (tags instanceof TemplateFolder) return [tags.toXMLNode()];
-        else return [];
-      }),
-      Template: this.tags.flatMap((tags) => {
-        if (tags instanceof Template) return [tags.toXMLNode()];
-        else return [];
-      }),
+    const element: ElementElement = {
+      type: "element",
+      name: "TemplateList",
+      elements: this.tags.map((tag) => tag.toXMLElement()),
     };
 
-    return node;
+    return element;
   }
 
-  static fromXMLNode(node: node | null) {
+  static fromXMLElement(element: ElementElement) {
     const tags: TemplateList["tags"] = [];
-    if (node) {
-      const { Folder: folders_, Template: templates_ } = node;
-      if (isNode(folders_)) {
-        nodeToArray(folders_).forEach((folderNode) => {
-          tags.push(TemplateFolder.fromXMLNode(folderNode));
-        });
+    element.elements.forEach((e) => {
+      if (e.type !== "element") return;
+      switch (e.name) {
+        case "Folder":
+          tags.push(TemplateFolder.fromXMLElement(e));
+          break;
+        case "Template":
+          tags.push(Template.fromXMLElement(e));
+          break;
       }
-      if (isNode(templates_)) {
-        nodeToArray(templates_).forEach((templateNode) => {
-          tags.push(Template.fromXMLNode(templateNode));
-        });
-      }
-    }
+    });
     const templateList = new this(tags);
     return templateList;
   }
@@ -463,43 +470,46 @@ class Map<T extends Bank> {
 
   check() {}
 
-  toXMLNode() {
+  toXMLElement() {
     this.check();
-    const node: unode = {
-      "@Name": this.name,
-      PC: this.pcs.map((pc) => pc.toXMLNode()),
+    const element: ElementElement = {
+      type: "element",
+      name: "Map",
+      attributes: { "Name": this.name },
+      elements: this.pcs.map((p) => p.toXMLElement()),
     };
-    return node;
+    return element;
   }
 
-  protected static fromXMLNodeBase(node: node) {
-    const { "@Name": name, PC: pc_ } = node;
+  protected static fromXMLElementBase(element: ElementElement) {
+    const { "Name": name } = element.attributes || {};
 
     if (name === undefined) {
       throw new DominoError("Invalid XML: Not Found Map Name");
     }
 
-    let pcNodes = [];
-    if (pc_) {
-      if (Array.isArray(pc_)) pcNodes = pc_;
-      else pcNodes = [pc_];
-    }
-    return { name: String(name), pcNodes };
+    const pcElements: ElementElement[] = element.elements.filter(
+      (e): e is ElementElement => {
+        if (e.type === "element" && e.name === "PC") return true;
+        else return false;
+      },
+    );
+    return { name: String(name), pcElements };
   }
 }
 
 export class InstrumentMap extends Map<Bank> implements Base {
-  static fromXMLNode(node: node) {
-    const { name, pcNodes } = this.fromXMLNodeBase(node);
-    const pcs = pcNodes.map((pcNode) => InstrumentPC.fromXMLNode(pcNode));
+  static fromXMLElement(element: ElementElement) {
+    const { name, pcElements } = this.fromXMLElementBase(element);
+    const pcs = pcElements.map((e) => InstrumentPC.fromXMLElement(e));
     const map = new this(name, pcs);
     return map;
   }
 }
 export class DrumMap extends Map<DrumBank> implements Base {
-  static fromXMLNode(node: node) {
-    const { name, pcNodes } = this.fromXMLNodeBase(node);
-    const pcs = pcNodes.map((pcNode) => DrumPC.fromXMLNode(pcNode));
+  static fromXMLElement(element: ElementElement) {
+    const { name, pcElements } = this.fromXMLElementBase(element);
+    const pcs = pcElements.map((e) => DrumPC.fromXMLElement(e));
     const map = new this(name, pcs);
     return map;
   }
@@ -524,19 +534,23 @@ class PC<T extends Bank> {
     }
   }
 
-  toXMLNode() {
+  toXMLElement() {
     this.check();
-    const node: unode = {
-      "@Name": this.name,
-      "@PC": this.pc,
-      Bank: this.banks.map((bank) => bank.toXMLNode()),
+    const element: ElementElement = {
+      type: "element",
+      name: "PC",
+      attributes: {
+        "Name": this.name,
+        "PC": this.pc,
+      },
+      elements: this.banks.map((bank) => bank.toXMLElement()),
     };
 
-    return node;
+    return element;
   }
 
-  protected static fromXMLNodeBase(node: node) {
-    const { "@Name": name, "@PC": pc, Bank: bank_ } = node;
+  protected static fromXMLElementBase(element: ElementElement) {
+    const { "Name": name, "PC": pc } = element.attributes || {};
 
     if (name === undefined) {
       throw new DominoError("Invalid XML: Not Found PC Name");
@@ -545,21 +559,22 @@ class PC<T extends Bank> {
       throw new DominoError("Invalid XML: Not found PC");
     }
 
-    let bankNodes;
-    if (Array.isArray(bank_)) bankNodes = bank_;
-    else if (bank_) bankNodes = [bank_];
-    if (bankNodes === undefined) {
+    const bankElements = element.elements.filter((e): e is ElementElement => {
+      if (e.type === "element" && e.name === "Bank") return true;
+      else return false;
+    });
+    if (bankElements.length === 0) {
       throw new DominoError("Invalid XML: Not found Bank");
     }
 
-    return { name: String(name), pc, bankNodes };
+    return { name: String(name), pc, bankElements };
   }
 }
 
 export class InstrumentPC extends PC<Bank> implements Base {
-  static fromXMLNode(node: node) {
-    const { name, pc, bankNodes } = this.fromXMLNodeBase(node);
-    const banks = bankNodes.map((bank) => Bank.fromXMLNode(bank)) as [
+  static fromXMLElement(element: ElementElement) {
+    const { name, pc, bankElements } = this.fromXMLElementBase(element);
+    const banks = bankElements.map((bank) => Bank.fromXMLElement(bank)) as [
       Bank,
       ...Bank[],
     ];
@@ -569,9 +584,9 @@ export class InstrumentPC extends PC<Bank> implements Base {
   }
 }
 export class DrumPC extends PC<DrumBank> implements Base {
-  static fromXMLNode(node: node) {
-    const { name, pc, bankNodes } = this.fromXMLNodeBase(node);
-    const banks = bankNodes.map((bank) => DrumBank.fromXMLNode(bank)) as [
+  static fromXMLElement(element: ElementElement) {
+    const { name, pc, bankElements } = this.fromXMLElementBase(element);
+    const banks = bankElements.map((bank) => DrumBank.fromXMLElement(bank)) as [
       DrumBank,
       ...DrumBank[],
     ];
@@ -609,18 +624,23 @@ export class Bank implements Base {
     }
   }
 
-  toXMLNode() {
+  toXMLElement() {
     this.check();
-    const node: unode = {
-      "@Name": this.name,
+    const element: ElementElement = {
+      type: "element",
+      name: "Bank",
+      attributes: {
+        "Name": this.name,
+        "LSB": this.lsb,
+        "MSB": this.msb,
+      },
+      elements: [],
     };
-    if (this.lsb !== undefined) node["@LSB"] = this.lsb;
-    if (this.msb !== undefined) node["@MSB"] = this.msb;
-    return node;
+    return element;
   }
 
-  protected static fromXMLNodeBase(node: node) {
-    const { "@Name": name, "@LSB": lsb, "@MSB": msb } = node;
+  protected static fromXMLElementBase(element: ElementElement) {
+    const { "Name": name, "LSB": lsb, "MSB": msb } = element.attributes || {};
 
     if (name === undefined) {
       throw new DominoError("Invalid XML: Not found Name");
@@ -637,8 +657,8 @@ export class Bank implements Base {
     return { name: String(name), lsb, msb };
   }
 
-  static fromXMLNode(node: node) {
-    const { name, lsb, msb } = this.fromXMLNodeBase(node);
+  static fromXMLElement(element: ElementElement) {
+    const { name, lsb, msb } = this.fromXMLElementBase(element);
     const bank = new Bank(name, lsb, msb);
     return bank;
   }
@@ -654,24 +674,21 @@ export class DrumBank extends Bank {
     this.tones = tones || [];
   }
 
-  toXMLNode() {
+  toXMLElement() {
     this.check();
-    const node = super.toXMLNode();
-    if (this.tones.length > 0) {
-      node.Tone = this.tones.map((tone) => tone.toXMLNode());
-    }
-    return node;
+    const element = super.toXMLElement();
+    element.elements.push(...this.tones.map((tone) => tone.toXMLElement()));
+    return element;
   }
 
-  static fromXMLNode(node: node) {
-    const { name, lsb, msb } = this.fromXMLNodeBase(node);
-    const { Tone: tone_ } = node;
+  static fromXMLElement(element: ElementElement) {
+    const { name, lsb, msb } = this.fromXMLElementBase(element);
 
-    let toneNodes;
-    if (Array.isArray(tone_)) toneNodes = tone_;
-    else if (tone_ !== undefined) toneNodes = [tone_];
-
-    const tone = toneNodes?.map((tone) => Tone.fromXMLNode(tone));
+    const tone = element.elements.flatMap((tone) => {
+      if (tone.type === "element" && tone.name === "Tone") {
+        return [Tone.fromXMLElement(tone)];
+      } else return [];
+    });
 
     const bank = new this(tone, name, lsb, msb);
     return bank;
@@ -695,17 +712,22 @@ export class Tone implements Base {
     }
   }
 
-  toXMLNode() {
+  toXMLElement() {
     this.check();
-    const node: unode = {
-      "@Name": this.name,
-      "@Key": this.key,
+    const element: ElementElement = {
+      type: "element",
+      name: "Tone",
+      attributes: {
+        "Name": this.name,
+        "Key": this.key,
+      },
+      elements: [],
     };
-    return node;
+    return element;
   }
 
-  static fromXMLNode(node: node) {
-    const { "@Name": name, "@Key": key } = node;
+  static fromXMLElement(element: ElementElement) {
+    const { "Name": name, "Key": key } = element.attributes || {};
 
     if (name === undefined) {
       throw new DominoError("Invalid XML: Not found Tone Name");
@@ -736,46 +758,26 @@ export class CCMFolder implements Base {
 
   check() {}
 
-  toXMLNode() {
+  toXMLElement() {
     this.check();
-    const node: unode = {
-      "@Name": this.param.name,
-      Folder: this.tags.flatMap((tags) => {
-        if (tags instanceof CCMFolder) return [tags.toXMLNode()];
-        else return [];
-      }),
-      FolderLink: this.tags.flatMap((tags) => {
-        if (tags instanceof CCMFolderLink) return [tags.toXMLNode()];
-        else return [];
-      }),
-      CCM: this.tags.flatMap((tags) => {
-        if (tags instanceof CCM) return [tags.toXMLNode()];
-        else return [];
-      }),
-      CCMLink: this.tags.flatMap((tags) => {
-        if (tags instanceof CCMLink) return [tags.toXMLNode()];
-        else return [];
-      }),
-      Table: this.tags.flatMap((tags) => {
-        if (tags instanceof Table) return [tags.toXMLNode()];
-        else return [];
-      }),
+    const element: ElementElement = {
+      type: "element",
+      name: "Folder",
+      attributes: {
+        "Name": this.param.name,
+        "ID": this.param.id,
+      },
+      elements: this.tags.map((tag) => tag.toXMLElement()),
     };
-    if (this.param.id !== undefined) node["@ID"] = this.param.id;
 
-    return node;
+    return element;
   }
 
-  static fromXMLNode(node: node) {
+  static fromXMLElement(element: ElementElement) {
     const {
-      "@Name": name,
-      "@ID": id,
-      Folder: folders_,
-      FolderLink: folderLinks_,
-      CCM: ccms_,
-      CCMLink: ccmlinks_,
-      Table: tables_,
-    } = node;
+      "Name": name,
+      "ID": id,
+    } = element.attributes || {};
     if (name === undefined) {
       throw new DominoError("Invalid XML: Not found Folder Name");
     }
@@ -789,32 +791,29 @@ export class CCMFolder implements Base {
     }
 
     const tags: ConstructorParameters<typeof this>[1] = [];
-
-    if (isNode(folders_)) {
-      nodeToArray(folders_).forEach((folderNode) => {
-        tags.push(CCMFolder.fromXMLNode(folderNode));
-      });
-    }
-    if (isNode(folderLinks_)) {
-      nodeToArray(folderLinks_).forEach((folderLinkNode) => {
-        tags.push(CCMFolderLink.fromXMLNode(folderLinkNode));
-      });
-    }
-    if (isNode(ccms_)) {
-      nodeToArray(ccms_).forEach((ccmNode) => {
-        tags.push(CCM.fromXMLNode(ccmNode));
-      });
-    }
-    if (isNode(ccmlinks_)) {
-      nodeToArray(ccmlinks_).forEach((ccmLinkNode) => {
-        tags.push(CCMLink.fromXMLNode(ccmLinkNode));
-      });
-    }
-    if (isNode(tables_)) {
-      nodeToArray(tables_).forEach((tableNode) => {
-        tags.push(Table.fromXMLNode(tableNode));
-      });
-    }
+    element.elements
+      .forEach(
+        (e) => {
+          if (e.type !== "element") return;
+          switch (e.name) {
+            case "Folder":
+              tags.push(CCMFolder.fromXMLElement(e));
+              break;
+            case "FolderLink":
+              tags.push(CCMFolderLink.fromXMLElement(e));
+              break;
+            case "CCM":
+              tags.push(CCM.fromXMLElement(e));
+              break;
+            case "CCMLink":
+              tags.push(CCMLink.fromXMLElement(e));
+              break;
+            case "Table":
+              tags.push(Table.fromXMLElement(e));
+              break;
+          }
+        },
+      );
 
     const folder = new this(param, tags);
     return folder;
@@ -837,20 +836,26 @@ export class CCMFolderLink implements Base {
 
   check() {}
 
-  toXMLNode() {
+  toXMLElement() {
     this.check();
-    const node: unode = {
-      "@Name": this.param.name,
-      "@ID": this.param.id,
+    const element: ElementElement = {
+      type: "element",
+      name: "FolderLink",
+      attributes: {
+        "Name": this.param.name,
+        "ID": this.param.id,
+        "Value": this.param.value,
+        "Gate": this.param.gate,
+      },
+      elements: [],
     };
-    if (this.param.value !== undefined) node["@Value"] = this.param.value;
-    if (this.param.gate !== undefined) node["@Gate"] = this.param.gate;
 
-    return node;
+    return element;
   }
 
-  static fromXMLNode(node: node) {
-    const { "@Name": name, "@ID": id, "@Value": value, "@Gate": gate } = node;
+  static fromXMLElement(element: ElementElement) {
+    const { "Name": name, "ID": id, "Value": value, "Gate": gate } =
+      element.attributes || {};
 
     if (name === undefined) {
       throw new DominoError("Invalid XML: Not found FolderLink Name");
@@ -925,34 +930,38 @@ export class CCM implements Base {
     }
   }
 
-  toXMLNode() {
+  toXMLElement() {
     this.check();
-    const node: unode = {
-      "@ID": this.param.id,
-      "@Name": this.param.name,
+    const element: ElementElement = {
+      type: "element",
+      name: "CCM",
+      attributes: {
+        "ID": this.param.id,
+        "Name": this.param.name,
+        "Color": this.param.color,
+        "Sync": this.param.sync,
+      },
+      elements: [],
     };
-    if (this.param.color !== undefined) node["@Color"] = this.param.color;
-    if (this.param.sync !== undefined) node["@Sync"] = this.param.sync;
+    if (this.value) element.elements.push(this.value.toXMLElement());
+    if (this.gate) element.elements.push(this.gate.toXMLElement());
+    if (this.data) element.elements.push(this.data.toXMLElement());
+    if (this.memo) {
+      element.elements.push(
+        {
+          type: "element",
+          name: "Memo",
+          elements: [{ type: "text", text: this.memo }],
+        },
+      );
+    }
 
-    if (this.value !== undefined) node.Value = this.value.toXMLNode();
-    if (this.gate !== undefined) node.Gate = this.gate.toXMLNode();
-    if (this.data !== undefined) node.Data = this.data.toXMLNode();
-    if (this.memo !== undefined) node.Memo = this.memo;
-
-    return node;
+    return element;
   }
 
-  static fromXMLNode(node: node) {
-    const {
-      "@ID": id,
-      "@Name": name,
-      "@Color": color,
-      "@Sync": sync,
-      Value: value_,
-      Gate: gate_,
-      Memo: memo,
-      Data: data_,
-    } = node;
+  static fromXMLElement(element: ElementElement) {
+    const { "ID": id, "Name": name, "Color": color, "Sync": sync } =
+      element.attributes || {};
 
     if (typeof id !== "number") {
       throw new DominoError("Invalid XML: Not found CCM ID");
@@ -976,16 +985,29 @@ export class CCM implements Base {
       } else param.sync = sync;
     }
 
+    const elements = element.elements.filter((e): e is ElementElement =>
+      e.type === "element"
+    );
     const tags: ConstructorParameters<typeof this>[1] = {};
-    if (value_ !== undefined && isNode(value_)) {
-      tags.value = Value.fromXMLNode(value_);
+    const value = elements.find((e) => e.name === "Value");
+    if (value) {
+      tags.value = Value.fromXMLElement(value);
     }
-    if (gate_ !== undefined && isNode(gate_)) {
-      tags.gate = Gate.fromXMLNode(gate_);
+    const gate = elements.find((e) => e.name === "Gate");
+    if (gate) {
+      tags.gate = Gate.fromXMLElement(gate);
     }
-    if (memo !== undefined && typeof memo === "string") tags.memo = memo;
-    if (data_ !== undefined && typeof data_ === "string") {
-      tags.data = Data.fromXMLNode(data_);
+    const memo = elements.find((e) => e.name === "Memo");
+    if (memo) {
+      const textElement = memo.elements[0];
+      if (textElement?.type === "text") tags.memo = textElement.text;
+    }
+    const data = elements.find((e) => e.name === "Data");
+    if (data) {
+      const textElement = data.elements[0];
+      if (textElement?.type === "text") {
+        tags.data = Data.fromXMLElements(textElement.text);
+      }
     }
 
     const ccm = new this(param, tags);
@@ -1008,19 +1030,24 @@ export class CCMLink implements Base {
 
   check() {}
 
-  toXMLNode() {
+  toXMLElement() {
     this.check();
-    const node: unode = {
-      "@ID": this.param.id,
+    const element: ElementElement = {
+      type: "element",
+      name: "CCMLink",
+      attributes: {
+        "ID": this.param.id,
+        "Value": this.param.value,
+        "Gate": this.param.gate,
+      },
+      elements: [],
     };
-    if (this.param.value !== undefined) node["@Value"] = this.param.value;
-    if (this.param.gate !== undefined) node["@Gate"] = this.param.gate;
 
-    return node;
+    return element;
   }
 
-  static fromXMLNode(node: node) {
-    const { "@ID": id, "@Value": value, "@Gate": gate } = node;
+  static fromXMLElement(element: ElementElement) {
+    const { "ID": id, "Value": value, "Gate": gate } = element.attributes || {};
 
     if (id === undefined || typeof id !== "number") {
       throw new DominoError("Invalid XML: Not found CCMLink ID");
@@ -1073,34 +1100,39 @@ export class Value implements Base {
     });
   }
 
-  toXMLNode() {
+  toXMLElement() {
     this.check();
-    const node: unode = {};
-    if (this.param.default !== undefined) node["@Default"] = this.param.default;
-    if (this.param.min !== undefined) node["@Min"] = this.param.min;
-    if (this.param.max !== undefined) node["@Max"] = this.param.max;
-    if (this.param.offset !== undefined) node["@Offset"] = this.param.offset;
-    if (this.param.name !== undefined) node["@Name"] = this.param.name;
-    if (this.param.type !== undefined) node["@Type"] = this.param.type;
-    if (this.param.tableId !== undefined) node["@TableID"] = this.param.tableId;
+    const element: ElementElement = {
+      type: "element",
+      name: "Value",
+      attributes: {
+        "Default": this.param.default,
+        "Min": this.param.min,
+        "Max": this.param.max,
+        "Offset": this.param.offset,
+        "Name": this.param.name,
+        "Type": this.param.type,
+        "TableID": this.param.tableId,
+      },
+      elements: [],
+    };
 
-    if (this.tags !== undefined) {
-      node.Entry = this.tags.map((tag) => tag.toXMLNode());
+    if (this.tags) {
+      element.elements.push(...this.tags.map((tag) => tag.toXMLElement()));
     }
-    return node;
+    return element;
   }
 
-  static fromXMLNode(node: node) {
+  static fromXMLElement(element: ElementElement) {
     const {
-      "@Default": defaultValue,
-      "@Min": min,
-      "@Max": max,
-      "@Offset": offset,
-      "@Name": name,
-      "@Type": type,
-      "@TableID": tableId,
-      Entry: entries_,
-    } = node;
+      "Default": defaultValue,
+      "Min": min,
+      "Max": max,
+      "Offset": offset,
+      "Name": name,
+      "Type": type,
+      "TableID": tableId,
+    } = element.attributes || {};
 
     const param: ConstructorParameters<typeof this>[0] = {};
     if (defaultValue !== undefined) {
@@ -1137,19 +1169,23 @@ export class Value implements Base {
       } else param.tableId = tableId;
     }
 
-    const entries: Entry[] = [];
-    if (isNode(entries_)) {
-      nodeToArray(entries_).forEach((entry) => {
-        entries.push(Entry.fromXMLNode(entry));
-      });
-    }
+    const entries: Entry[] = element.elements.flatMap((e) => {
+      if (e.type === "element") return Entry.fromXMLElement(e);
+      return [];
+    });
 
     const value = new this(param, entries);
     return value;
   }
 }
 
-export class Gate extends Value {}
+export class Gate extends Value {
+  override toXMLElement() {
+    const element = super.toXMLElement();
+    element.name = "Gate";
+    return element;
+  }
+}
 
 export class Entry implements Base {
   public param: {
@@ -1163,17 +1199,22 @@ export class Entry implements Base {
 
   check() {}
 
-  toXMLNode() {
+  toXMLElement() {
     this.check();
-    const node: unode = {
-      "@Label": this.param.label,
-      "@Value": this.param.value,
+    const element: ElementElement = {
+      type: "element",
+      name: "Entry",
+      attributes: {
+        "Label": this.param.label,
+        "Value": this.param.value,
+      },
+      elements: [],
     };
-    return node;
+    return element;
   }
 
-  static fromXMLNode(node: node) {
-    const { "@Label": label, "@Value": value } = node;
+  static fromXMLElement(element: ElementElement) {
+    const { "Label": label, "Value": value } = element.attributes || {};
 
     if (label === undefined) {
       throw new DominoError("Invalid XML: Not found Entry Label");
@@ -1204,26 +1245,33 @@ export class Table implements Base {
     }
   }
 
-  toXMLNode() {
+  toXMLElement() {
     this.check();
-    const node: unode = {
-      "@ID": this.param.id,
+    const element: ElementElement = {
+      type: "element",
+      name: "Table",
+      attributes: {
+        "ID": this.param.id,
+      },
+      elements: this.tags.map((tag) => tag.toXMLElement()),
     };
-    node.Entry = this.tags.map((tag) => tag.toXMLNode());
-    return node;
+    return element;
   }
 
-  static fromXMLNode(node: node) {
-    const { "@ID": id, Entry: entries_ } = node;
+  static fromXMLElement(element: ElementElement) {
+    const { "ID": id } = element.attributes || {};
 
     if (id === undefined || typeof id !== "number") {
       throw new DominoError("Invalid XML: Not found Table ID");
     }
 
-    let tags: ConstructorParameters<typeof this>[1];
-    if (isNode(entries_)) {
-      tags = nodeToArray(entries_).map((entry) => Entry.fromXMLNode(entry));
-    }
+    const tags: ConstructorParameters<typeof this>[1] = element.elements
+      .flatMap(
+        (e) => {
+          if (e.type === "element") return [Entry.fromXMLElement(e)];
+          return [];
+        },
+      );
 
     const table = new this({ id }, tags);
     return table;
@@ -1238,13 +1286,19 @@ export class Data implements Base {
 
   check() {}
 
-  toXMLNode() {
+  toXMLElement() {
     this.check();
-    const node: unode = { "#text": this.text };
-    return node;
+    const element: ElementElement = {
+      type: "element",
+      name: "Data",
+      elements: [
+        { type: "text", text: this.text },
+      ],
+    };
+    return element;
   }
 
-  static fromXMLNode(node: string) {
+  static fromXMLElements(node: string) {
     const data = new this(node);
     return data;
   }
@@ -1266,29 +1320,32 @@ export class TemplateFolder implements Base {
 
   check() {}
 
-  toXMLNode() {
+  toXMLElement() {
     this.check();
-    const node: unode = {
-      "@Name": this.param.name,
-      Template: this.tags.map((tag) => tag.toXMLNode()),
+    const element: ElementElement = {
+      type: "element",
+      name: "Folder",
+      attributes: {
+        "Name": this.param.name,
+      },
+      elements: this.tags.map((tag) => tag.toXMLElement()),
     };
 
-    return node;
+    return element;
   }
 
-  static fromXMLNode(node: node) {
-    const { "@Name": name, Template: tags_ } = node;
+  static fromXMLElement(element: ElementElement) {
+    const { "Name": name } = element.attributes || {};
 
     if (name === undefined) {
       throw new DominoError("Invalid XML: Not found Folder Name");
     }
 
-    const tags: Template[] = [];
-    if (isNode(tags_)) {
-      nodeToArray(tags_).forEach((tag) => {
-        tags.push(Template.fromXMLNode(tag));
-      });
-    }
+    const tags: Template[] = element.elements.flatMap((e) => {
+      if (e.type === "element" && e.name === "Template") {
+        return [Template.fromXMLElement(e)];
+      } else return [];
+    });
 
     const folder = new this({ name: String(name) }, tags);
     return folder;
@@ -1315,23 +1372,22 @@ export class Template implements Base {
     }
   }
 
-  toXMLNode() {
+  toXMLElement() {
     this.check();
-    const node: unode = {
-      "@Name": this.param.name,
-      CC: this.tags.flatMap((tag) => {
-        if (tag instanceof CC) return [tag.toXMLNode()];
-        else return [];
-      }),
+    const element: ElementElement = {
+      type: "element",
+      name: "Template",
+      attributes: {
+        "ID": this.param.id,
+        "Name": this.param.name,
+      },
+      elements: this.tags.map((tag) => tag.toXMLElement()),
     };
-    if (this.param.id !== undefined) {
-      node["@ID"] = this.param.id;
-    }
-    return node;
+    return element;
   }
 
-  static fromXMLNode(node: node) {
-    const { "@Name": name, "@ID": id, CC: ccs_ } = node;
+  static fromXMLElement(element: ElementElement) {
+    const { "Name": name, "ID": id } = element.attributes || {};
 
     if (name === undefined) {
       throw new DominoError("Invalid XML: Not found Template Name");
@@ -1346,11 +1402,15 @@ export class Template implements Base {
     }
 
     const tags: ConstructorParameters<typeof this>[1] = [];
-    if (isNode(ccs_)) {
-      nodeToArray(ccs_).forEach((ccNode) => {
-        tags.push(CC.fromXMLNode(ccNode));
+    element.elements
+      .forEach((e) => {
+        if (e.type !== "element") return;
+        switch (e.name) {
+          case "CC":
+            tags.push(CC.fromXMLElement(e));
+            break;
+        }
       });
-    }
 
     const template = new this(params, tags);
     return template;
@@ -1366,19 +1426,24 @@ export class CC implements Base {
 
   check() {}
 
-  toXMLNode() {
+  toXMLElement() {
     this.check();
-    const node: unode = {
-      "@ID": this.param.id,
+    const element: ElementElement = {
+      type: "element",
+      name: "CC",
+      attributes: {
+        "ID": this.param.id,
+        "Value": this.param.value,
+        "Gate": this.param.gate,
+      },
+      elements: [],
     };
-    if (this.param.value !== undefined) node["@Value"] = this.param.value;
-    if (this.param.gate !== undefined) node["@Gate"] = this.param.gate;
 
-    return node;
+    return element;
   }
 
-  static fromXMLNode(node: node) {
-    const { "@ID": id, "@Value": value, "@Gate": gate } = node;
+  static fromXMLElement(element: ElementElement) {
+    const { "ID": id, "Value": value, "Gate": gate } = element.attributes || {};
 
     if (id === undefined || typeof id !== "number") {
       throw new DominoError("Invalid XML: Not found CC ID");
@@ -1405,5 +1470,5 @@ export class CC implements Base {
 
 interface Base {
   check(): void;
-  toXMLNode(): unode;
+  toXMLElement(): ElementElement;
 }
