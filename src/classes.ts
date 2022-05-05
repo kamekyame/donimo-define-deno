@@ -1106,13 +1106,13 @@ export class Value implements Base {
       type: "element",
       name: "Value",
       attributes: {
-        "Name": this.param.name,
-        "Type": this.param.type,
-        "TableID": this.param.tableId,
         "Default": this.param.default,
         "Min": this.param.min,
         "Max": this.param.max,
         "Offset": this.param.offset,
+        "Name": this.param.name,
+        "Type": this.param.type,
+        "TableID": this.param.tableId,
       },
       elements: [],
     };
