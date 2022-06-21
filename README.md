@@ -107,10 +107,10 @@ console.log(file);
   - [x] TemplateList
     - [x] Folder
     - [x] Template
-      - [ ] Memo
+      - [x] Memo
       - [x] CC
-      - [ ] PC
-      - [ ] Comment
+      - [x] PC
+      - [x] Comment
   - [ ] DefaultData
     - [ ] Mark
     - [ ] Track
