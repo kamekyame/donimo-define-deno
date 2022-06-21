@@ -1357,7 +1357,7 @@ export class TemplateFolder implements Base {
 
 export class Template implements Base {
   public param: { id?: number; name: string };
-  public tags: CC[];
+  public tags: (Memo | CC | TemplatePC | Comment)[];
 
   constructor(
     param: typeof Template.prototype.param,
@@ -1411,6 +1411,15 @@ export class Template implements Base {
         switch (e.name) {
           case "CC":
             tags.push(CC.fromXMLElement(e));
+            break;
+          case "Memo":
+            tags.push(Memo.fromXMLElement(e));
+            break;
+          case "PC":
+            tags.push(TemplatePC.fromXMLElement(e));
+            break;
+          case "Comment":
+            tags.push(Comment.fromXMLElement(e));
             break;
         }
       });
@@ -1468,6 +1477,142 @@ export class CC implements Base {
 
     const cc = new this(params);
     return cc;
+  }
+}
+
+export class Memo implements Base {
+  public text: string;
+
+  constructor(text: string) {
+    this.text = text;
+  }
+
+  check() {}
+
+  toXMLElement() {
+    this.check();
+    const element: ElementElement = {
+      type: "element",
+      name: "Memo",
+      elements: [{ type: "text", text: this.text }],
+    };
+
+    return element;
+  }
+
+  static fromXMLElement(element: ElementElement) {
+    const textElement = element.elements[0];
+    let text = "";
+    if (textElement?.type === "text") text = textElement.text;
+
+    const memo = new this(text);
+    return memo;
+  }
+}
+
+export class TemplatePC implements Base {
+  public param: {
+    pc: number;
+    msb?: number;
+    lsb?: number;
+    mode?: "Drumset" | "Auto";
+  };
+
+  constructor(param: Partial<typeof TemplatePC.prototype.param>) {
+    const { pc, ...otherParam } = param;
+    this.param = {
+      pc: pc ?? 1,
+      ...otherParam,
+    };
+  }
+
+  check() {
+    if (this.param.pc <= 0 || this.param.pc >= 129) {
+      throw new DominoError(
+        `PC PC must be 1 or more less than 128. Received: ${this.param.pc}`,
+      );
+    }
+  }
+
+  toXMLElement() {
+    this.check();
+    const element: ElementElement = {
+      type: "element",
+      name: "PC",
+      attributes: {
+        "PC": this.param.pc,
+        "MSB": this.param.msb,
+        "LSB": this.param.lsb,
+        "Mode": this.param.mode,
+      },
+      elements: [],
+    };
+
+    return element;
+  }
+
+  static fromXMLElement(element: ElementElement) {
+    const { "PC": pc, "MSB": msb, "LSB": lsb, "Mode": mode } =
+      element.attributes || {};
+
+    if (pc !== undefined && typeof pc !== "number") {
+      throw new DominoError("Invalid XML: Not found PC PC");
+    }
+
+    const params: ConstructorParameters<typeof this>[0] = {
+      pc,
+    };
+    if (msb !== undefined) {
+      if (typeof msb !== "number") {
+        throw new DominoError("Invalid XML: Not found PC MSB");
+      } else params.msb = msb;
+    }
+    if (lsb !== undefined) {
+      if (typeof lsb !== "number") {
+        throw new DominoError("Invalid XML: Not found PC LSB");
+      } else params.lsb = lsb;
+    }
+    if (mode !== undefined) {
+      if (mode !== "Drumset" && mode !== "Auto") {
+        throw new DominoError("Invalid XML: PC Mode is not Drumset or Auto");
+      } else params.mode = mode;
+    }
+
+    const pcTag = new this(params);
+    return pcTag;
+  }
+}
+
+export class Comment implements Base {
+  public param: {
+    text?: string;
+  };
+
+  constructor(param: typeof Comment.prototype.param) {
+    this.param = param;
+  }
+
+  check() {}
+
+  toXMLElement() {
+    this.check();
+    const element: ElementElement = {
+      type: "element",
+      name: "Comment",
+      attributes: { "Text": this.param.text },
+      elements: [],
+    };
+
+    return element;
+  }
+
+  static fromXMLElement(element: ElementElement) {
+    const { "Text": text } = element.attributes || {};
+
+    const comment = new this({
+      text: text === undefined ? undefined : String(text),
+    });
+    return comment;
   }
 }
 
