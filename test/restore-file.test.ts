@@ -1,7 +1,7 @@
 // Copyright 2022 kamekyame. All rights reserved. MIT license.
 
 import * as Domino from "../mod.ts";
-import { Encoding } from "../deps.test.ts";
+import { assertEquals, Encoding } from "../deps.test.ts";
 
 const folderPath = "./test/sample-files";
 
@@ -14,7 +14,10 @@ for await (const dirEntry of Deno.readDir(folderPath)) {
   Deno.test({
     name: `[restore-file] ${dirEntry.name}`,
     fn: () => {
-      Domino.File.fromXML(str);
+      const file = Domino.File.fromXML(str);
+      const file2 = Domino.File.fromXML(file.toXML());
+
+      assertEquals(file, file2);
     },
   });
 }

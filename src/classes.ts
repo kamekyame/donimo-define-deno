@@ -79,6 +79,7 @@ export class File {
       drumSetList,
       controlChangeMacroList,
       templateList,
+      defaultData,
     } = ModuleData.fromXMLElement(doc.elements[0]);
     const file = new File(
       {
@@ -89,7 +90,13 @@ export class File {
         fileVersion,
         website,
       },
-      { instrumentList, drumSetList, controlChangeMacroList, templateList },
+      {
+        instrumentList,
+        drumSetList,
+        controlChangeMacroList,
+        templateList,
+        defaultData,
+      },
     );
     return file;
   }
@@ -107,6 +114,7 @@ export class ModuleData implements Base {
   public drumSetList?: DrumSetList;
   public controlChangeMacroList?: ControlChangeMacroList;
   public templateList?: TemplateList;
+  public defaultData?: DefaultData;
 
   constructor(
     {
@@ -129,11 +137,13 @@ export class ModuleData implements Base {
       drumSetList,
       controlChangeMacroList,
       templateList,
+      defaultData,
     }: {
       instrumentList?: InstrumentList;
       drumSetList?: DrumSetList;
       controlChangeMacroList?: ControlChangeMacroList;
       templateList?: TemplateList;
+      defaultData?: DefaultData;
     } = {},
   ) {
     this.name = name;
@@ -147,6 +157,7 @@ export class ModuleData implements Base {
     this.drumSetList = drumSetList;
     this.controlChangeMacroList = controlChangeMacroList;
     this.templateList = templateList;
+    this.defaultData = defaultData;
   }
 
   check() {
@@ -255,6 +266,9 @@ export class ModuleData implements Base {
     if (this.templateList) {
       element.elements.push(this.templateList.toXMLElement());
     }
+    if (this.defaultData) {
+      element.elements.push(this.defaultData.toXMLElement());
+    }
 
     this.check();
     return element;
@@ -315,7 +329,10 @@ export class ModuleData implements Base {
     if (templateList_) {
       tags.templateList = TemplateList.fromXMLElement(templateList_);
     }
-
+    const defaultData_ = elementElements.find((e) => e.name === "DefaultData");
+    if (defaultData_) {
+      tags.defaultData = DefaultData.fromXMLElement(defaultData_);
+    }
     const moduleData = new ModuleData(param, tags);
     return moduleData;
   }
@@ -460,6 +477,44 @@ export class TemplateList implements Base {
     });
     const templateList = new this(tags);
     return templateList;
+  }
+}
+
+export class DefaultData implements Base {
+  public tags: (Mark | Track)[];
+
+  constructor(tags?: typeof DefaultData.prototype.tags) {
+    this.tags = tags || [];
+  }
+
+  check() {}
+
+  toXMLElement() {
+    this.check();
+    const element: ElementElement = {
+      type: "element",
+      name: "DefaultData",
+      elements: this.tags.map((tag) => tag.toXMLElement()),
+    };
+
+    return element;
+  }
+
+  static fromXMLElement(element: ElementElement) {
+    const tags: DefaultData["tags"] = [];
+    element.elements.forEach((e) => {
+      if (e.type !== "element") return;
+      switch (e.name) {
+        case "Mark":
+          tags.push(Mark.fromXMLElement(e));
+          break;
+        case "Track":
+          tags.push(Track.fromXMLElement(e));
+          break;
+      }
+    });
+    const defaultData = new this(tags);
+    return defaultData;
   }
 }
 
@@ -1613,6 +1668,410 @@ export class Comment implements Base {
       text: text === undefined ? undefined : String(text),
     });
     return comment;
+  }
+}
+
+export class Mark implements Base {
+  public param: {
+    meas: number;
+    name?: string;
+  };
+
+  constructor(param: typeof Mark.prototype.param) {
+    this.param = param;
+  }
+
+  check() {
+    if (this.param.meas <= 0) {
+      throw new DominoError(
+        `Mark Meas must be 1 or more. Received: ${this.param.meas}`,
+      );
+    }
+  }
+
+  toXMLElement() {
+    this.check();
+    const element: ElementElement = {
+      type: "element",
+      name: "Mark",
+      attributes: {
+        "Meas": this.param.meas,
+        "Name": this.param.name,
+      },
+      elements: [],
+    };
+
+    return element;
+  }
+
+  static fromXMLElement(element: ElementElement) {
+    const { "Meas": meas, "Name": name } = element.attributes || {};
+
+    if (meas === undefined || typeof meas !== "number") {
+      throw new DominoError("Invalid XML: Not found Mark Meas");
+    }
+
+    const mark = new this({
+      meas,
+      name: name === undefined ? undefined : String(name),
+    });
+    return mark;
+  }
+}
+
+export class Track implements Base {
+  public param: {
+    name?: string;
+    ch?: number;
+    mode?: "Conductor" | "Rhythm";
+  };
+
+  public tags: (
+    | DefaultDataCC
+    | DefaultDataPC
+    | DefaultDataComment
+    | DefaultDataTemplate
+    | EOT
+  )[];
+
+  constructor(
+    param: typeof Track.prototype.param,
+    tags: typeof Track.prototype.tags,
+  ) {
+    this.param = param;
+    this.tags = tags;
+  }
+
+  check() {
+    if (
+      this.param.ch !== undefined && (this.param.ch <= 0 || this.param.ch > 16)
+    ) {
+      throw new DominoError(
+        `Track Ch must be 1 or more and 16 or less. Received: ${this.param.ch}`,
+      );
+    }
+  }
+
+  toXMLElement() {
+    this.check();
+    const element: ElementElement = {
+      type: "element",
+      name: "Track",
+      attributes: {
+        "Name": this.param.name,
+        "Ch": this.param.ch,
+        "Mode": this.param.mode,
+      },
+      elements: this.tags.map((tag) => tag.toXMLElement()),
+    };
+
+    return element;
+  }
+
+  static fromXMLElement(element: ElementElement) {
+    const { "Name": name, "Ch": ch, "Mode": mode } = element.attributes || {};
+
+    if (ch !== undefined && typeof ch !== "number") {
+      throw new DominoError("Invalid XML: Not found Track Ch");
+    }
+    if (mode !== undefined) {
+      if (mode !== "Conductor" && mode !== "Rhythm") {
+        throw new DominoError("Invalid XML: Not found Track Mode");
+      }
+    }
+
+    const tags: ConstructorParameters<typeof this>[1] = [];
+    element.elements
+      .forEach((e) => {
+        if (e.type !== "element") return;
+        switch (e.name) {
+          case "CC":
+            tags.push(DefaultDataCC.fromXMLElement(e));
+            break;
+          case "PC":
+            tags.push(DefaultDataPC.fromXMLElement(e));
+            break;
+          case "Comment":
+            tags.push(DefaultDataComment.fromXMLElement(e));
+            break;
+          case "Template":
+            tags.push(DefaultDataTemplate.fromXMLElement(e));
+            break;
+          case "EOT":
+            tags.push(EOT.fromXMLElement(e));
+            break;
+        }
+      });
+
+    const track = new this({
+      name: name === undefined ? undefined : String(name),
+      ch,
+      mode,
+    }, tags);
+    return track;
+  }
+}
+
+export class DefaultDataCC implements Base {
+  public param: {
+    id: number;
+    value?: number;
+    gate?: number;
+    tick?: number;
+    step?: number;
+  };
+
+  constructor(param: typeof DefaultDataCC.prototype.param) {
+    this.param = param;
+  }
+
+  check() {}
+
+  toXMLElement() {
+    this.check();
+    const element: ElementElement = {
+      type: "element",
+      name: "CC",
+      attributes: {
+        "ID": this.param.id,
+        "Value": this.param.value,
+        "Gate": this.param.gate,
+        "Tick": this.param.tick,
+        "Step": this.param.step,
+      },
+      elements: [],
+    };
+
+    return element;
+  }
+
+  static fromXMLElement(element: ElementElement) {
+    const {
+      "ID": id,
+      "Value": value,
+      "Gate": gate,
+      "Tick": tick,
+      "Step": step,
+    } = element.attributes || {};
+
+    if (id === undefined || typeof id !== "number") {
+      throw new DominoError("Invalid XML: Not found DefaultData CC Name");
+    }
+    if (value !== undefined && typeof value !== "number") {
+      throw new DominoError("Invalid XML: Not found DefaultData CC Value");
+    }
+    if (gate !== undefined && typeof gate !== "number") {
+      throw new DominoError("Invalid XML: Not found DefaultData CC Gate");
+    }
+    if (tick !== undefined && typeof tick !== "number") {
+      throw new DominoError("Invalid XML: Not found DefaultData CC Tick");
+    }
+    if (step !== undefined && typeof step !== "number") {
+      throw new DominoError("Invalid XML: Not found DefaultData CC Step");
+    }
+
+    const cc = new this({ id, value, gate, tick, step });
+    return cc;
+  }
+}
+
+export class DefaultDataPC implements Base {
+  public param: {
+    pc?: number;
+    msb?: number;
+    lsb?: number;
+    mode?: "Drumset" | "Auto";
+    tick?: number;
+    step?: number;
+  };
+
+  constructor(param: typeof DefaultDataPC.prototype.param) {
+    this.param = param;
+  }
+
+  check() {
+    if (this.param.pc !== undefined) {
+      if (this.param.pc <= 0 || this.param.pc > 128) {
+        throw new DominoError(
+          `DefaultData PC PC must be 1 or more and 128 or less. Received: ${this.param.pc}`,
+        );
+      }
+    }
+  }
+
+  toXMLElement() {
+    this.check();
+    const element: ElementElement = {
+      type: "element",
+      name: "PC",
+      attributes: {
+        "PC": this.param.pc,
+        "MSB": this.param.msb,
+        "LSB": this.param.lsb,
+        "Mode": this.param.mode,
+        "Tick": this.param.tick,
+        "Step": this.param.step,
+      },
+      elements: [],
+    };
+
+    return element;
+  }
+
+  static fromXMLElement(element: ElementElement) {
+    const {
+      "PC": pc,
+      "MSB": msb,
+      "LSB": lsb,
+      "Mode": mode,
+      "Tick": tick,
+      "Step": step,
+    } = element.attributes || {};
+
+    if (pc !== undefined && typeof pc !== "number") {
+      throw new DominoError("Invalid XML: Not found DefaultData PC PC");
+    }
+    if (msb !== undefined && typeof msb !== "number") {
+      throw new DominoError("Invalid XML: Not found DefaultData PC MSB");
+    }
+    if (lsb !== undefined && typeof lsb !== "number") {
+      throw new DominoError("Invalid XML: Not found DefaultData PC LSB");
+    }
+    if (mode !== undefined && mode !== "Drumset" && mode !== "Auto") {
+      throw new DominoError("Invalid XML: Not found DefaultData PC Mode");
+    }
+    if (tick !== undefined && typeof tick !== "number") {
+      throw new DominoError("Invalid XML: Not found DefaultData PC Tick");
+    }
+    if (step !== undefined && typeof step !== "number") {
+      throw new DominoError("Invalid XML: Not found DefaultData PC Step");
+    }
+
+    const defaultDataPc = new this({ pc, msb, lsb, mode, tick, step });
+    return defaultDataPc;
+  }
+}
+
+export class DefaultDataComment implements Base {
+  public param: { text?: string; tick?: number; step?: number };
+
+  constructor(param: typeof DefaultDataComment.prototype.param) {
+    this.param = param;
+  }
+
+  check() {}
+
+  toXMLElement() {
+    this.check();
+    const element: ElementElement = {
+      type: "element",
+      name: "Comment",
+      attributes: {
+        "Text": this.param.text,
+        "Tick": this.param.tick,
+        "Step": this.param.step,
+      },
+      elements: [],
+    };
+
+    return element;
+  }
+
+  static fromXMLElement(element: ElementElement) {
+    const { "Text": text, "Tick": tick, "Step": step } = element.attributes ||
+      {};
+
+    if (tick !== undefined && typeof tick !== "number") {
+      throw new DominoError("Invalid XML: Not found DefaultData Comment Tick");
+    }
+    if (step !== undefined && typeof step !== "number") {
+      throw new DominoError("Invalid XML: Not found DefaultData Comment Step");
+    }
+
+    const comment = new this({
+      text: text === undefined ? undefined : String(text),
+      tick,
+      step,
+    });
+    return comment;
+  }
+}
+
+export class DefaultDataTemplate implements Base {
+  public param: { id?: number; tick?: number; step?: number };
+
+  constructor(param: typeof DefaultDataTemplate.prototype.param) {
+    this.param = param;
+  }
+
+  check() {}
+
+  toXMLElement() {
+    this.check();
+    const element: ElementElement = {
+      type: "element",
+      name: "Template",
+      attributes: {
+        "ID": this.param.id,
+        "Tick": this.param.tick,
+        "Step": this.param.step,
+      },
+      elements: [],
+    };
+
+    return element;
+  }
+
+  static fromXMLElement(element: ElementElement) {
+    const { "ID": id, "Tick": tick, "Step": step } = element.attributes ||
+      {};
+
+    if (id !== undefined && typeof id !== "number") {
+      throw new DominoError("Invalid XML: Not found DefaultData Template ID");
+    }
+    if (tick !== undefined && typeof tick !== "number") {
+      throw new DominoError("Invalid XML: Not found DefaultData Template Tick");
+    }
+    if (step !== undefined && typeof step !== "number") {
+      throw new DominoError("Invalid XML: Not found DefaultData Template Step");
+    }
+
+    const template = new this({ id, tick, step });
+    return template;
+  }
+}
+
+export class EOT implements Base {
+  public param: { tick?: number };
+
+  constructor(param: typeof EOT.prototype.param) {
+    this.param = param;
+  }
+
+  check() {}
+
+  toXMLElement() {
+    this.check();
+    const element: ElementElement = {
+      type: "element",
+      name: "EOT",
+      attributes: {
+        "Tick": this.param.tick,
+      },
+      elements: [],
+    };
+
+    return element;
+  }
+
+  static fromXMLElement(element: ElementElement) {
+    const { "Tick": tick } = element.attributes || {};
+
+    if (tick !== undefined && typeof tick !== "number") {
+      throw new DominoError("Invalid XML: Not found DefaultData Template Tick");
+    }
+    const eot = new this({ tick });
+    return eot;
   }
 }
 
