@@ -4,6 +4,20 @@ import { assertThrows } from "../deps.test.ts";
 import * as Domino from "../mod.ts";
 
 Deno.test({
+  name: "[DefaultData CC] Invalid Normal",
+  fn: () => {
+    const fileStr = `<?xml version="1.0" encoding="Shift_JIS"?>
+    <ModuleData Name="test"><DefaultData>
+    <Track>
+    <CC ID="0"/>
+    </Track>
+  </DefaultData></ModuleData>`;
+    const file = Domino.File.fromXML(fileStr);
+    file.toXML();
+  },
+});
+
+Deno.test({
   name: "[DefaultData CC] Invalid ID",
   fn: () => {
     const fileStr = `<?xml version="1.0" encoding="Shift_JIS"?>

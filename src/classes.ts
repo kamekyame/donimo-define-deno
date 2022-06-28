@@ -1710,11 +1710,11 @@ export class Mark implements Base {
     if (meas === undefined || typeof meas !== "number") {
       throw new DominoError("Invalid XML: Not found Mark Meas");
     }
-    if (name !== undefined && typeof name !== "string") {
-      throw new DominoError("Invalid XML: Not found Mark Name");
-    }
 
-    const mark = new this({ meas, name });
+    const mark = new this({
+      meas,
+      name: name === undefined ? undefined : String(name),
+    });
     return mark;
   }
 }
@@ -1736,10 +1736,10 @@ export class Track implements Base {
 
   constructor(
     param: typeof Track.prototype.param,
-    tags?: typeof Track.prototype.tags,
+    tags: typeof Track.prototype.tags,
   ) {
     this.param = param;
-    this.tags = tags ?? [];
+    this.tags = tags;
   }
 
   check() {
@@ -1771,9 +1771,6 @@ export class Track implements Base {
   static fromXMLElement(element: ElementElement) {
     const { "Name": name, "Ch": ch, "Mode": mode } = element.attributes || {};
 
-    if (name !== undefined && typeof name !== "string") {
-      throw new DominoError("Invalid XML: Not found Track Name");
-    }
     if (ch !== undefined && typeof ch !== "number") {
       throw new DominoError("Invalid XML: Not found Track Ch");
     }
@@ -1806,7 +1803,11 @@ export class Track implements Base {
         }
       });
 
-    const track = new this({ name, ch, mode }, tags);
+    const track = new this({
+      name: name === undefined ? undefined : String(name),
+      ch,
+      mode,
+    }, tags);
     return track;
   }
 }
@@ -1980,9 +1981,6 @@ export class DefaultDataComment implements Base {
     const { "Text": text, "Tick": tick, "Step": step } = element.attributes ||
       {};
 
-    if (text !== undefined && typeof text !== "string") {
-      throw new DominoError("Invalid XML: Not found DefaultData Comment Text");
-    }
     if (tick !== undefined && typeof tick !== "number") {
       throw new DominoError("Invalid XML: Not found DefaultData Comment Tick");
     }
@@ -1990,7 +1988,11 @@ export class DefaultDataComment implements Base {
       throw new DominoError("Invalid XML: Not found DefaultData Comment Step");
     }
 
-    const comment = new this({ text, tick, step });
+    const comment = new this({
+      text: text === undefined ? undefined : String(text),
+      tick,
+      step,
+    });
     return comment;
   }
 }
