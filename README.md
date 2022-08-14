@@ -87,6 +87,7 @@ console.log(file);
   - [ ] RhythmTrackDefault
   - [ ] ExclusiveEventDefault
   - [ ] ProgramChangeEventPropertyDlg
+  - [ ] ControlChangeEventDefault
   - [x] InstrumentList
     - [x] Map
       - [x] PC
@@ -117,6 +118,10 @@ console.log(file);
   - [x] DefaultData
     - [x] Mark
     - [x] Track
+      - [x] Mark
+      - [x] TimeSignature
+      - [x] KeySignature
+      - [x] Tempo
       - [x] CC
       - [x] PC
       - [x] Comment
@@ -125,4 +130,5 @@ console.log(file);
 
 ## XMLスキーム
 
-[音源定義ファイルの仕様 - TAKABO SOFT NETWORK](http://5.pro.tok2.com/~mpc/ranzan86/domino/Domino129/Manual/module.htm)
+- [音源定義ファイルの仕様 - TAKABO SOFT NETWORK](http://5.pro.tok2.com/~mpc/ranzan86/domino/Domino129/Manual/module.htm)
+- Domino 1.43に付属する取扱説明書内の音源定義ファイルの仕様

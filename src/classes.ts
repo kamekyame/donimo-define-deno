@@ -1727,6 +1727,10 @@ export class Track implements Base {
   };
 
   public tags: (
+    | DefaultDataTrackMark
+    | Tempo
+    | TimeSignature
+    | KeySignature
     | DefaultDataCC
     | DefaultDataPC
     | DefaultDataComment
@@ -1785,6 +1789,18 @@ export class Track implements Base {
       .forEach((e) => {
         if (e.type !== "element") return;
         switch (e.name) {
+          case "Mark":
+            tags.push(DefaultDataTrackMark.fromXMLElement(e));
+            break;
+          case "Tempo":
+            tags.push(Tempo.fromXMLElement(e));
+            break;
+          case "TimeSignature":
+            tags.push(TimeSignature.fromXMLElement(e));
+            break;
+          case "KeySignature":
+            tags.push(KeySignature.fromXMLElement(e));
+            break;
           case "CC":
             tags.push(DefaultDataCC.fromXMLElement(e));
             break;
@@ -1809,6 +1825,201 @@ export class Track implements Base {
       mode,
     }, tags);
     return track;
+  }
+}
+
+export class DefaultDataTrackMark implements Base {
+  public param: { name?: string; tick?: number; step?: number };
+
+  constructor(param: typeof DefaultDataTrackMark.prototype.param) {
+    this.param = param;
+  }
+
+  check() {}
+
+  toXMLElement() {
+    this.check();
+    const element: ElementElement = {
+      type: "element",
+      name: "Mark",
+      attributes: {
+        "Name": this.param.name,
+        "Tick": this.param.tick,
+        "Step": this.param.step,
+      },
+      elements: [],
+    };
+
+    return element;
+  }
+
+  static fromXMLElement(element: ElementElement) {
+    const { "Name": name, "Tick": tick, "Step": step } = element.attributes ||
+      {};
+
+    if (tick !== undefined && typeof tick !== "number") {
+      throw new DominoError("Invalid XML: Not found TimeSignature Tick");
+    }
+    if (step !== undefined && typeof step !== "number") {
+      throw new DominoError("Invalid XML: Not found TimeSignature Step");
+    }
+
+    const t = new this({
+      name: name === undefined ? undefined : String(name),
+      tick,
+      step,
+    });
+    return t;
+  }
+}
+
+export class Tempo implements Base {
+  public param: { tempo: number; tick?: number; step?: number };
+
+  constructor(param: typeof Tempo.prototype.param) {
+    this.param = param;
+  }
+
+  check() {}
+
+  toXMLElement() {
+    this.check();
+    const element: ElementElement = {
+      type: "element",
+      name: "Tempo",
+      attributes: {
+        "Tempo": this.param.tempo.toFixed(3),
+        "Tick": this.param.tick,
+        "Step": this.param.step,
+      },
+      elements: [],
+    };
+
+    return element;
+  }
+
+  static fromXMLElement(element: ElementElement) {
+    const { "Tempo": tempo, "Tick": tick, "Step": step } = element.attributes ||
+      {};
+
+    if (tempo === undefined || typeof tempo !== "number") {
+      throw new DominoError(
+        "Invalid XML: Not found Tempo Tempo",
+      );
+    }
+    if (tick !== undefined && typeof tick !== "number") {
+      throw new DominoError("Invalid XML: Not found Tempo Tick");
+    }
+    if (step !== undefined && typeof step !== "number") {
+      throw new DominoError("Invalid XML: Not found Tempo Step");
+    }
+
+    const t = new this({ tempo, tick, step });
+    return t;
+  }
+}
+
+export class TimeSignature implements Base {
+  public param: { timeSignature: string; tick?: number; step?: number };
+
+  constructor(param: typeof TimeSignature.prototype.param) {
+    this.param = param;
+  }
+
+  check() {
+    const signature = this.param.timeSignature.split("/");
+    for (const s of signature) {
+      if (/^\d+$/.test(s) === false) {
+        throw new DominoError(
+          "TimeSignature TimeSignature does not follow format. Received: " +
+            this.param.timeSignature,
+        );
+      }
+    }
+  }
+
+  toXMLElement() {
+    this.check();
+    const element: ElementElement = {
+      type: "element",
+      name: "TimeSignature",
+      attributes: {
+        "TimeSignature": this.param.timeSignature,
+        "Tick": this.param.tick,
+        "Step": this.param.step,
+      },
+      elements: [],
+    };
+
+    return element;
+  }
+
+  static fromXMLElement(element: ElementElement) {
+    const { "TimeSignature": timeSignature, "Tick": tick, "Step": step } =
+      element.attributes ||
+      {};
+
+    if (timeSignature === undefined || typeof timeSignature !== "string") {
+      throw new DominoError(
+        "Invalid XML: Not found TimeSignature TimeSignature",
+      );
+    }
+    if (tick !== undefined && typeof tick !== "number") {
+      throw new DominoError("Invalid XML: Not found TimeSignature Tick");
+    }
+    if (step !== undefined && typeof step !== "number") {
+      throw new DominoError("Invalid XML: Not found TimeSignature Step");
+    }
+
+    const t = new this({ timeSignature, tick, step });
+    return t;
+  }
+}
+
+export class KeySignature implements Base {
+  public param: { keySignature: string; tick?: number; step?: number };
+
+  constructor(param: typeof KeySignature.prototype.param) {
+    this.param = param;
+  }
+
+  check() {}
+
+  toXMLElement() {
+    this.check();
+    const element: ElementElement = {
+      type: "element",
+      name: "KeySignature",
+      attributes: {
+        "KeySignature": this.param.keySignature,
+        "Tick": this.param.tick,
+        "Step": this.param.step,
+      },
+      elements: [],
+    };
+
+    return element;
+  }
+
+  static fromXMLElement(element: ElementElement) {
+    const { "KeySignature": keySignature, "Tick": tick, "Step": step } =
+      element.attributes ||
+      {};
+
+    if (keySignature === undefined || typeof keySignature !== "string") {
+      throw new DominoError(
+        "Invalid XML: Not found KeySignature KeySignature",
+      );
+    }
+    if (tick !== undefined && typeof tick !== "number") {
+      throw new DominoError("Invalid XML: Not found KeySignature Tick");
+    }
+    if (step !== undefined && typeof step !== "number") {
+      throw new DominoError("Invalid XML: Not found KeySignature Step");
+    }
+
+    const t = new this({ keySignature, tick, step });
+    return t;
   }
 }
 
