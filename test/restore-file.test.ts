@@ -1,7 +1,6 @@
 // Copyright 2022 kamekyame. All rights reserved. MIT license.
 
 import * as Domino from "../mod.ts";
-import { xml2js } from "../deps.ts";
 import { assertEquals, Encoding } from "../deps.test.ts";
 
 const folderPath = "./test/sample-files";
@@ -19,19 +18,6 @@ for await (const dirEntry of Deno.readDir(folderPath)) {
       const file2 = Domino.File.fromXML(file.toXML());
 
       assertEquals(file, file2);
-
-      const doc = xml2js(str, {
-        compact: false,
-        nativeTypeAttributes: true,
-        alwaysChildren: true,
-      });
-      const doc2 = xml2js(file.toXML(), {
-        compact: false,
-        nativeTypeAttributes: true,
-        alwaysChildren: true,
-      });
-
-      assertEquals(doc, doc2);
     },
   });
 }
