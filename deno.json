@@ -3,6 +3,6 @@
     "noUncheckedIndexedAccess": true
   },
   "tasks": {
-    "test": "deno test -A --no-check=remote --coverage=./test/coverage"
+    "test": "deno test -A --parallel --coverage=./test/coverage"
   }
 }
