@@ -14,12 +14,7 @@ Deno.test({
     const f = Domino.File.fromXML(fileStr);
     f.toXML();
 
-    assertNotEquals(
-      f.moduleData.tags.find((tag) =>
-        tag instanceof Domino.ControlChangeEventDefault
-      ),
-      undefined,
-    );
+    assertNotEquals(f.moduleData.tags.controlChangeEventDefault, undefined);
   },
 });
 

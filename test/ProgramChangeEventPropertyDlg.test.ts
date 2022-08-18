@@ -14,12 +14,7 @@ Deno.test({
     const f = Domino.File.fromXML(fileStr);
     f.toXML();
 
-    assertNotEquals(
-      f.moduleData.tags.find((tag) =>
-        tag instanceof Domino.ProgramChangeEventPropertyDlg
-      ),
-      undefined,
-    );
+    assertNotEquals(f.moduleData.tags.programChangeEventPropertyDlg, undefined);
   },
 });
 

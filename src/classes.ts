@@ -97,17 +97,17 @@ export class ModuleData implements Base {
   public fileVersion?: string;
   public website?: string;
 
-  public tags: (
-    | RhythmTrackDefault
-    | ExclusiveEventDefault
-    | ProgramChangeEventPropertyDlg
-    | ControlChangeEventDefault
-    | InstrumentList
-    | DrumSetList
-    | ControlChangeMacroList
-    | TemplateList
-    | DefaultData
-  )[] = [];
+  public tags: {
+    rhythmTrackDefault?: RhythmTrackDefault;
+    exclusiveEventDefault?: ExclusiveEventDefault;
+    programChangeEventPropertyDlg?: ProgramChangeEventPropertyDlg;
+    controlChangeEventDefault?: ControlChangeEventDefault;
+    instrumentList?: InstrumentList;
+    drumSetList?: DrumSetList;
+    controlChangeMacroList?: ControlChangeMacroList;
+    templateList?: TemplateList;
+    defaultData?: DefaultData;
+  };
 
   constructor(
     {
@@ -138,15 +138,6 @@ export class ModuleData implements Base {
   }
 
   check() {
-    const tagNames = new Set<string>();
-    this.tags.forEach((tag) => {
-      const tagName = tag.constructor.name;
-      if (tagNames.has(tagName)) {
-        throw new DominoError(`Duplicate tag: ${tagName}`);
-      }
-      tagNames.add(tagName);
-    });
-
     function flatFn(
       tag: CCMFolder | CCM | CCMLink | CCMFolderLink | Table | string,
     ): Array<CCMFolder | CCM | CCMLink | CCMFolderLink | Table | string> {
@@ -198,12 +189,7 @@ export class ModuleData implements Base {
       log.info(`Used Ids (${type}): ${str}`);
     }
 
-    const isControlChangeMacroList = (
-      tag: ModuleData["tags"][number],
-    ): tag is ControlChangeMacroList => tag instanceof ControlChangeMacroList;
-    const ccmFlatList = this.tags.find(isControlChangeMacroList)?.tags.flatMap(
-      flatFn,
-    );
+    const ccmFlatList = this.tags.controlChangeMacroList?.tags.flatMap(flatFn);
     const ccm: CCM[] = [];
     const ccmFolder: CCMFolder[] = [];
     const ccmLink: CCMLink[] = [];
@@ -245,7 +231,7 @@ export class ModuleData implements Base {
       elements: [],
     };
 
-    this.tags.forEach((tag) => {
+    Object.values(this.tags).forEach((tag) => {
       element.elements.push(tag.toXMLElement());
     });
 
@@ -278,37 +264,43 @@ export class ModuleData implements Base {
     if (fileVersion !== undefined) param.fileVersion = String(fileVersion);
     if (website !== undefined) param.website = String(website);
 
-    const tags: ModuleData["tags"] = [];
+    const tags: ModuleData["tags"] = {};
     element.elements
       .forEach((e) => {
         if (e.type !== "element") return;
         switch (e.name) {
           case "RhythmTrackDefault":
-            tags.push(RhythmTrackDefault.fromXMLElement(e));
+            tags.rhythmTrackDefault = RhythmTrackDefault.fromXMLElement(e);
             break;
           case "ExclusiveEventDefault":
-            tags.push(ExclusiveEventDefault.fromXMLElement(e));
+            tags.exclusiveEventDefault = ExclusiveEventDefault.fromXMLElement(
+              e,
+            );
             break;
           case "ProgramChangeEventPropertyDlg":
-            tags.push(ProgramChangeEventPropertyDlg.fromXMLElement(e));
+            tags.programChangeEventPropertyDlg = ProgramChangeEventPropertyDlg
+              .fromXMLElement(e);
             break;
           case "ControlChangeEventDefault":
-            tags.push(ControlChangeEventDefault.fromXMLElement(e));
+            tags.controlChangeEventDefault = ControlChangeEventDefault
+              .fromXMLElement(e);
             break;
           case "InstrumentList":
-            tags.push(InstrumentList.fromXMLElement(e));
+            tags.instrumentList = InstrumentList.fromXMLElement(e);
             break;
           case "DrumSetList":
-            tags.push(DrumSetList.fromXMLElement(e));
+            tags.drumSetList = DrumSetList.fromXMLElement(e);
             break;
           case "ControlChangeMacroList":
-            tags.push(ControlChangeMacroList.fromXMLElement(e));
+            tags.controlChangeMacroList = ControlChangeMacroList.fromXMLElement(
+              e,
+            );
             break;
           case "TemplateList":
-            tags.push(TemplateList.fromXMLElement(e));
+            tags.templateList = TemplateList.fromXMLElement(e);
             break;
           case "DefaultData":
-            tags.push(DefaultData.fromXMLElement(e));
+            tags.defaultData = DefaultData.fromXMLElement(e);
             break;
         }
       });
@@ -1087,11 +1079,16 @@ export class CCM implements Base {
     sync?: "Last" | "LastEachGate";
   };
 
-  public tags: (Value | Gate | Data | string)[];
+  public tags: {
+    value?: Value;
+    gate?: Gate;
+    data?: Data;
+    memo?: string;
+  };
 
   constructor(
     param: typeof CCM.prototype.param,
-    tags: typeof CCM.prototype.tags = [],
+    tags: typeof CCM.prototype.tags = {},
   ) {
     this.param = param;
     this.tags = tags;
@@ -1108,19 +1105,6 @@ export class CCM implements Base {
         `CCM Color must start with #. Received: ${this.param.color}`,
       );
     }
-
-    const tagNames = new Set<string>();
-    this.tags.forEach((tag) => {
-      let tagName;
-      if (tag instanceof Gate) tagName = "Gate";
-      else if (tag instanceof Value) tagName = "Value";
-      else if (tag instanceof Data) tagName = "Data";
-      else tagName = "Memo";
-      if (tagNames.has(tagName)) {
-        throw new DominoError(`Duplicate tag: ${tagName}`);
-      }
-      tagNames.add(tagName);
-    });
   }
 
   toXMLElement() {
@@ -1136,7 +1120,7 @@ export class CCM implements Base {
       },
       elements: [],
     };
-    this.tags.map((tag) => {
+    Object.values(this.tags).map((tag) => {
       if (typeof tag === "string") {
         element.elements.push(
           {
@@ -1179,30 +1163,30 @@ export class CCM implements Base {
       } else param.sync = sync;
     }
 
-    const tags: ConstructorParameters<typeof this>[1] = [];
+    const tags: ConstructorParameters<typeof this>[1] = {};
     element.elements
       .forEach((e) => {
         if (e.type !== "element") return;
         switch (e.name) {
           case "Value":
-            tags.push(Value.fromXMLElement(e));
+            tags.value = Value.fromXMLElement(e);
             break;
           case "Gate":
-            tags.push(Gate.fromXMLElement(e));
+            tags.gate = Gate.fromXMLElement(e);
             break;
           case "Data": {
             const textElement = e.elements[0];
             if (textElement?.type === "text") {
-              tags.push(Data.fromXMLElements(textElement.text));
+              tags.data = Data.fromXMLElements(textElement.text);
             } else {
-              tags.push(Data.fromXMLElements(""));
+              tags.data = Data.fromXMLElements("");
             }
             break;
           }
           case "Memo": {
             const textElement = e.elements[0];
-            if (textElement?.type === "text") tags.push(textElement.text);
-            else tags.push("");
+            if (textElement?.type === "text") tags.memo = textElement.text;
+            else tags.memo = "";
             break;
           }
         }

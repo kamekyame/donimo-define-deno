@@ -15,13 +15,9 @@ Deno.test({
 
     const f = Domino.File.fromXML(fileStr);
     let memoStr;
-    f.moduleData.tags.forEach((tag) => {
-      if (tag instanceof Domino.ControlChangeMacroList) {
-        tag.tags.forEach((tag) => {
-          if (tag instanceof Domino.CCMFolder) {
-            memoStr = tag.tags[0];
-          }
-        });
+    f.moduleData.tags.controlChangeMacroList?.tags.forEach((tag) => {
+      if (tag instanceof Domino.CCMFolder) {
+        memoStr = tag.tags[0];
       }
     });
     assertEquals(memoStr, "memo");
