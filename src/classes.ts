@@ -75,29 +75,16 @@ export class File {
       fileCreator,
       fileVersion,
       website,
-      instrumentList,
-      drumSetList,
-      controlChangeMacroList,
-      templateList,
-      defaultData,
+      tags,
     } = ModuleData.fromXMLElement(doc.elements[0]);
-    const file = new File(
-      {
-        name,
-        folder,
-        priority,
-        fileCreator,
-        fileVersion,
-        website,
-      },
-      {
-        instrumentList,
-        drumSetList,
-        controlChangeMacroList,
-        templateList,
-        defaultData,
-      },
-    );
+    const file = new File({
+      name,
+      folder,
+      priority,
+      fileCreator,
+      fileVersion,
+      website,
+    }, tags);
     return file;
   }
 }
@@ -110,11 +97,17 @@ export class ModuleData implements Base {
   public fileVersion?: string;
   public website?: string;
 
-  public instrumentList?: InstrumentList;
-  public drumSetList?: DrumSetList;
-  public controlChangeMacroList?: ControlChangeMacroList;
-  public templateList?: TemplateList;
-  public defaultData?: DefaultData;
+  public tags: {
+    rhythmTrackDefault?: RhythmTrackDefault;
+    exclusiveEventDefault?: ExclusiveEventDefault;
+    programChangeEventPropertyDlg?: ProgramChangeEventPropertyDlg;
+    controlChangeEventDefault?: ControlChangeEventDefault;
+    instrumentList?: InstrumentList;
+    drumSetList?: DrumSetList;
+    controlChangeMacroList?: ControlChangeMacroList;
+    templateList?: TemplateList;
+    defaultData?: DefaultData;
+  };
 
   constructor(
     {
@@ -132,19 +125,7 @@ export class ModuleData implements Base {
       fileVersion?: string;
       website?: string;
     },
-    {
-      instrumentList,
-      drumSetList,
-      controlChangeMacroList,
-      templateList,
-      defaultData,
-    }: {
-      instrumentList?: InstrumentList;
-      drumSetList?: DrumSetList;
-      controlChangeMacroList?: ControlChangeMacroList;
-      templateList?: TemplateList;
-      defaultData?: DefaultData;
-    } = {},
+    tags: ModuleData["tags"],
   ) {
     this.name = name;
     this.folder = folder;
@@ -153,17 +134,13 @@ export class ModuleData implements Base {
     this.fileVersion = fileVersion;
     this.website = website;
 
-    this.instrumentList = instrumentList;
-    this.drumSetList = drumSetList;
-    this.controlChangeMacroList = controlChangeMacroList;
-    this.templateList = templateList;
-    this.defaultData = defaultData;
+    this.tags = tags;
   }
 
   check() {
     function flatFn(
-      tag: CCMFolder | CCM | CCMLink | CCMFolderLink | Table,
-    ): Array<CCMFolder | CCM | CCMLink | CCMFolderLink | Table> {
+      tag: CCMFolder | CCM | CCMLink | CCMFolderLink | Table | string,
+    ): Array<CCMFolder | CCM | CCMLink | CCMFolderLink | Table | string> {
       if (tag instanceof CCMFolder) return [tag, ...tag.tags.flatMap(flatFn)];
       else return [tag];
     }
@@ -212,7 +189,7 @@ export class ModuleData implements Base {
       log.info(`Used Ids (${type}): ${str}`);
     }
 
-    const ccmFlatList = this.controlChangeMacroList?.tags.flatMap(flatFn);
+    const ccmFlatList = this.tags.controlChangeMacroList?.tags.flatMap(flatFn);
     const ccm: CCM[] = [];
     const ccmFolder: CCMFolder[] = [];
     const ccmLink: CCMLink[] = [];
@@ -254,21 +231,9 @@ export class ModuleData implements Base {
       elements: [],
     };
 
-    if (this.instrumentList) {
-      element.elements.push(this.instrumentList.toXMLElement());
-    }
-    if (this.drumSetList) {
-      element.elements.push(this.drumSetList.toXMLElement());
-    }
-    if (this.controlChangeMacroList) {
-      element.elements.push(this.controlChangeMacroList.toXMLElement());
-    }
-    if (this.templateList) {
-      element.elements.push(this.templateList.toXMLElement());
-    }
-    if (this.defaultData) {
-      element.elements.push(this.defaultData.toXMLElement());
-    }
+    Object.values(this.tags).forEach((tag) => {
+      element.elements.push(tag.toXMLElement());
+    });
 
     this.check();
     return element;
@@ -299,42 +264,193 @@ export class ModuleData implements Base {
     if (fileVersion !== undefined) param.fileVersion = String(fileVersion);
     if (website !== undefined) param.website = String(website);
 
-    const tags: NonNullable<ConstructorParameters<typeof ModuleData>[1]> = {};
+    const tags: ModuleData["tags"] = {};
+    element.elements
+      .forEach((e) => {
+        if (e.type !== "element") return;
+        switch (e.name) {
+          case "RhythmTrackDefault":
+            tags.rhythmTrackDefault = RhythmTrackDefault.fromXMLElement(e);
+            break;
+          case "ExclusiveEventDefault":
+            tags.exclusiveEventDefault = ExclusiveEventDefault.fromXMLElement(
+              e,
+            );
+            break;
+          case "ProgramChangeEventPropertyDlg":
+            tags.programChangeEventPropertyDlg = ProgramChangeEventPropertyDlg
+              .fromXMLElement(e);
+            break;
+          case "ControlChangeEventDefault":
+            tags.controlChangeEventDefault = ControlChangeEventDefault
+              .fromXMLElement(e);
+            break;
+          case "InstrumentList":
+            tags.instrumentList = InstrumentList.fromXMLElement(e);
+            break;
+          case "DrumSetList":
+            tags.drumSetList = DrumSetList.fromXMLElement(e);
+            break;
+          case "ControlChangeMacroList":
+            tags.controlChangeMacroList = ControlChangeMacroList.fromXMLElement(
+              e,
+            );
+            break;
+          case "TemplateList":
+            tags.templateList = TemplateList.fromXMLElement(e);
+            break;
+          case "DefaultData":
+            tags.defaultData = DefaultData.fromXMLElement(e);
+            break;
+        }
+      });
 
-    const elementElements = element.elements.filter((e) =>
-      e.type === "element"
-    ) as ElementElement[];
-
-    const instrumentList_ = elementElements.find((e) =>
-      e.name === "InstrumentList"
-    );
-    if (instrumentList_) {
-      tags.instrumentList = InstrumentList.fromXMLElement(instrumentList_);
-    }
-    const drumSetList_ = elementElements.find((e) => e.name === "DrumSetList");
-    if (drumSetList_) {
-      tags.drumSetList = DrumSetList.fromXMLElement(drumSetList_);
-    }
-    const controlChangeMacroList_ = elementElements.find((e) =>
-      e.name === "ControlChangeMacroList"
-    );
-    if (controlChangeMacroList_) {
-      tags.controlChangeMacroList = ControlChangeMacroList.fromXMLNode(
-        controlChangeMacroList_,
-      );
-    }
-    const templateList_ = elementElements.find((e) =>
-      e.name === "TemplateList"
-    );
-    if (templateList_) {
-      tags.templateList = TemplateList.fromXMLElement(templateList_);
-    }
-    const defaultData_ = elementElements.find((e) => e.name === "DefaultData");
-    if (defaultData_) {
-      tags.defaultData = DefaultData.fromXMLElement(defaultData_);
-    }
     const moduleData = new ModuleData(param, tags);
     return moduleData;
+  }
+}
+
+export class RhythmTrackDefault implements Base {
+  public param: { gate: number };
+
+  constructor(param: typeof RhythmTrackDefault.prototype.param) {
+    this.param = param;
+  }
+
+  check() {}
+
+  toXMLElement() {
+    this.check();
+    const element: ElementElement = {
+      type: "element",
+      name: "RhythmTrackDefault",
+      attributes: {
+        "Gate": this.param.gate,
+      },
+      elements: [],
+    };
+
+    return element;
+  }
+
+  static fromXMLElement(element: ElementElement) {
+    const { "Gate": gate } = element.attributes || {};
+    if (gate === undefined || typeof gate !== "number") {
+      throw new DominoError(
+        "Invalid XML: Not found RhythmTrackDefault Gate",
+      );
+    }
+    const t = new this({ gate });
+    return t;
+  }
+}
+
+export class ExclusiveEventDefault implements Base {
+  public param: { data: string };
+
+  constructor(param: typeof ExclusiveEventDefault.prototype.param) {
+    this.param = param;
+  }
+
+  check() {}
+
+  toXMLElement() {
+    this.check();
+    const element: ElementElement = {
+      type: "element",
+      name: "ExclusiveEventDefault",
+      attributes: {
+        "Data": this.param.data,
+      },
+      elements: [],
+    };
+
+    return element;
+  }
+
+  static fromXMLElement(element: ElementElement) {
+    const { "Data": data } = element.attributes || {};
+    if (data === undefined || typeof data !== "string") {
+      throw new DominoError(
+        "Invalid XML: Not found ExclusiveEventDefault Data",
+      );
+    }
+    const t = new this({ data });
+    return t;
+  }
+}
+
+export class ProgramChangeEventPropertyDlg implements Base {
+  public param: { autoPreviewDelay: number };
+
+  constructor(param: typeof ProgramChangeEventPropertyDlg.prototype.param) {
+    this.param = param;
+  }
+
+  check() {}
+
+  toXMLElement() {
+    this.check();
+    const element: ElementElement = {
+      type: "element",
+      name: "ProgramChangeEventPropertyDlg",
+      attributes: {
+        "AutoPreviewDelay": this.param.autoPreviewDelay,
+      },
+      elements: [],
+    };
+
+    return element;
+  }
+
+  static fromXMLElement(element: ElementElement) {
+    const { "AutoPreviewDelay": autoPreviewDelay } = element.attributes || {};
+    if (
+      autoPreviewDelay === undefined || typeof autoPreviewDelay !== "number"
+    ) {
+      throw new DominoError(
+        "Invalid XML: Not found ProgramChangeEventPropertyDlg AutoPreviewDelay",
+      );
+    }
+    const t = new this({ autoPreviewDelay });
+    return t;
+  }
+}
+
+export class ControlChangeEventDefault implements Base {
+  public param: { id: number };
+
+  constructor(param: typeof ControlChangeEventDefault.prototype.param) {
+    this.param = param;
+  }
+
+  check() {}
+
+  toXMLElement() {
+    this.check();
+    const element: ElementElement = {
+      type: "element",
+      name: "ControlChangeEventDefault",
+      attributes: {
+        "ID": this.param.id,
+      },
+      elements: [],
+    };
+
+    return element;
+  }
+
+  static fromXMLElement(element: ElementElement) {
+    const { "ID": id } = element.attributes || {};
+    if (
+      id === undefined || typeof id !== "number"
+    ) {
+      throw new DominoError(
+        "Invalid XML: Not found ControlChangeEventDefault ID",
+      );
+    }
+    const t = new this({ id });
+    return t;
   }
 }
 
@@ -413,7 +529,7 @@ export class ControlChangeMacroList implements Base {
     return element;
   }
 
-  static fromXMLNode(element: ElementElement) {
+  static fromXMLElement(element: ElementElement) {
     const tags: ControlChangeMacroList["tags"] = [];
     element.elements.forEach(
       (e) => {
@@ -804,7 +920,7 @@ export class CCMFolder implements Base {
     name: string;
     id?: number;
   };
-  public tags: (CCMFolder | CCMFolderLink | CCM | CCMLink | Table)[];
+  public tags: (CCMFolder | CCMFolderLink | CCM | CCMLink | Table | string)[];
 
   constructor(
     param: typeof CCMFolder.prototype.param,
@@ -825,7 +941,15 @@ export class CCMFolder implements Base {
         "Name": this.param.name,
         "ID": this.param.id,
       },
-      elements: this.tags.map((tag) => tag.toXMLElement()),
+      elements: this.tags.map((tag) => {
+        if (typeof tag === "string") {
+          return {
+            type: "element",
+            name: "Memo",
+            elements: [{ type: "text", text: tag }],
+          };
+        } else return tag.toXMLElement();
+      }),
     };
 
     return element;
@@ -869,6 +993,12 @@ export class CCMFolder implements Base {
             case "Table":
               tags.push(Table.fromXMLElement(e));
               break;
+            case "Memo": {
+              const textElement = e.elements[0];
+              if (textElement?.type === "text") tags.push(textElement.text);
+              else tags.push("");
+              break;
+            }
           }
         },
       );
@@ -949,32 +1079,21 @@ export class CCM implements Base {
     sync?: "Last" | "LastEachGate";
   };
 
-  public value?: Value;
-  public gate?: Gate;
-  public data?: Data;
-  public memo?: string;
+  public tags: {
+    value?: Value;
+    gate?: Gate;
+    data?: Data;
+    memo?: string;
+  };
 
   constructor(
     param: typeof CCM.prototype.param,
-    {
-      value,
-      gate,
-      data,
-      memo,
-    }: {
-      value?: Value;
-      gate?: Gate;
-      data?: Data;
-      memo?: string;
-    } = {},
+    tags: typeof CCM.prototype.tags = {},
   ) {
     this.param = param;
-
-    this.value = value;
-    this.gate = gate;
-    this.data = data;
-    this.memo = memo;
+    this.tags = tags;
   }
+
   check() {
     if (this.param.id < 0 || this.param.id > 1300) {
       throw new DominoError(
@@ -1001,18 +1120,19 @@ export class CCM implements Base {
       },
       elements: [],
     };
-    if (this.value) element.elements.push(this.value.toXMLElement());
-    if (this.gate) element.elements.push(this.gate.toXMLElement());
-    if (this.data) element.elements.push(this.data.toXMLElement());
-    if (this.memo) {
-      element.elements.push(
-        {
-          type: "element",
-          name: "Memo",
-          elements: [{ type: "text", text: this.memo }],
-        },
-      );
-    }
+    Object.values(this.tags).map((tag) => {
+      if (typeof tag === "string") {
+        element.elements.push(
+          {
+            type: "element",
+            name: "Memo",
+            elements: [{ type: "text", text: tag }],
+          },
+        );
+      } else {
+        element.elements.push(tag.toXMLElement());
+      }
+    });
 
     return element;
   }
@@ -1043,30 +1163,34 @@ export class CCM implements Base {
       } else param.sync = sync;
     }
 
-    const elements = element.elements.filter((e): e is ElementElement =>
-      e.type === "element"
-    );
     const tags: ConstructorParameters<typeof this>[1] = {};
-    const value = elements.find((e) => e.name === "Value");
-    if (value) {
-      tags.value = Value.fromXMLElement(value);
-    }
-    const gate = elements.find((e) => e.name === "Gate");
-    if (gate) {
-      tags.gate = Gate.fromXMLElement(gate);
-    }
-    const memo = elements.find((e) => e.name === "Memo");
-    if (memo) {
-      const textElement = memo.elements[0];
-      if (textElement?.type === "text") tags.memo = textElement.text;
-    }
-    const data = elements.find((e) => e.name === "Data");
-    if (data) {
-      const textElement = data.elements[0];
-      if (textElement?.type === "text") {
-        tags.data = Data.fromXMLElements(textElement.text);
-      }
-    }
+    element.elements
+      .forEach((e) => {
+        if (e.type !== "element") return;
+        switch (e.name) {
+          case "Value":
+            tags.value = Value.fromXMLElement(e);
+            break;
+          case "Gate":
+            tags.gate = Gate.fromXMLElement(e);
+            break;
+          case "Data": {
+            const textElement = e.elements[0];
+            if (textElement?.type === "text") {
+              tags.data = Data.fromXMLElements(textElement.text);
+            } else {
+              tags.data = Data.fromXMLElements("");
+            }
+            break;
+          }
+          case "Memo": {
+            const textElement = e.elements[0];
+            if (textElement?.type === "text") tags.memo = textElement.text;
+            else tags.memo = "";
+            break;
+          }
+        }
+      });
 
     const ccm = new this(param, tags);
     return ccm;
@@ -1366,7 +1490,7 @@ export class TemplateFolder implements Base {
   public param: {
     name: string;
   };
-  public tags: Template[];
+  public tags: (Template | TemplateFolder)[];
 
   constructor(
     param: typeof TemplateFolder.prototype.param,
@@ -1399,10 +1523,14 @@ export class TemplateFolder implements Base {
       throw new DominoError("Invalid XML: Not found Folder Name");
     }
 
-    const tags: Template[] = element.elements.flatMap((e) => {
-      if (e.type === "element" && e.name === "Template") {
-        return [Template.fromXMLElement(e)];
-      } else return [];
+    const tags: TemplateFolder["tags"] = [];
+    element.elements.forEach((e) => {
+      if (e.type !== "element") return;
+      if (e.name === "Template") {
+        tags.push(Template.fromXMLElement(e));
+      } else if (e.name === "Folder") {
+        tags.push(TemplateFolder.fromXMLElement(e));
+      } else return;
     });
 
     const folder = new this({ name: String(name) }, tags);
@@ -1567,22 +1695,21 @@ export class Memo implements Base {
 
 export class TemplatePC implements Base {
   public param: {
-    pc: number;
+    pc?: number;
     msb?: number;
     lsb?: number;
     mode?: "Drumset" | "Auto";
   };
 
   constructor(param: Partial<typeof TemplatePC.prototype.param>) {
-    const { pc, ...otherParam } = param;
-    this.param = {
-      pc: pc ?? 1,
-      ...otherParam,
-    };
+    this.param = param;
   }
 
   check() {
-    if (this.param.pc <= 0 || this.param.pc >= 129) {
+    if (
+      this.param.pc !== undefined &&
+      (this.param.pc <= 0 || this.param.pc >= 129)
+    ) {
       throw new DominoError(
         `PC PC must be 1 or more less than 128. Received: ${this.param.pc}`,
       );
@@ -1724,6 +1851,7 @@ export class Track implements Base {
     name?: string;
     ch?: number;
     mode?: "Conductor" | "Rhythm";
+    current?: number;
   };
 
   public tags: (
@@ -1765,6 +1893,7 @@ export class Track implements Base {
         "Name": this.param.name,
         "Ch": this.param.ch,
         "Mode": this.param.mode,
+        "Current": this.param.current,
       },
       elements: this.tags.map((tag) => tag.toXMLElement()),
     };
@@ -1773,7 +1902,8 @@ export class Track implements Base {
   }
 
   static fromXMLElement(element: ElementElement) {
-    const { "Name": name, "Ch": ch, "Mode": mode } = element.attributes || {};
+    const { "Name": name, "Ch": ch, "Mode": mode, "Current": current } =
+      element.attributes || {};
 
     if (ch !== undefined && typeof ch !== "number") {
       throw new DominoError("Invalid XML: Not found Track Ch");
@@ -1782,6 +1912,9 @@ export class Track implements Base {
       if (mode !== "Conductor" && mode !== "Rhythm") {
         throw new DominoError("Invalid XML: Not found Track Mode");
       }
+    }
+    if (current !== undefined && typeof current !== "number") {
+      throw new DominoError("Invalid XML: Not found Track Current");
     }
 
     const tags: ConstructorParameters<typeof this>[1] = [];
@@ -1823,6 +1956,7 @@ export class Track implements Base {
       name: name === undefined ? undefined : String(name),
       ch,
       mode,
+      current,
     }, tags);
     return track;
   }
