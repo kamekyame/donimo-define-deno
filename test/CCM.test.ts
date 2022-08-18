@@ -84,3 +84,19 @@ Deno.test({
     }, Domino.DominoError);
   },
 });
+
+Deno.test({
+  name: "[CCM] Duplicate Tag",
+  fn: () => {
+    const fileStr = `<?xml version="1.0" encoding="Shift_JIS"?>
+    <ModuleData Name="test"><ControlChangeMacroList>
+    <CCM ID="0" Name="test-ccm">
+    <Value /><Value />
+    </CCM>
+  </ControlChangeMacroList></ModuleData>`;
+    assertThrows(() => {
+      const f = Domino.File.fromXML(fileStr);
+      f.toXML();
+    }, Domino.DominoError);
+  },
+});

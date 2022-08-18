@@ -11,9 +11,9 @@ Deno.test({
       new Domino.InstrumentMap("test-map"),
     ]);
 
-    const file = new Domino.File({ name: "test", folder: "test" }, {
+    const file = new Domino.File({ name: "test", folder: "test" }, [
       instrumentList,
-    });
+    ]);
     const str = file.toXML({ spaces: 2 });
     assertEquals(detect(str), EOL.CRLF);
   },

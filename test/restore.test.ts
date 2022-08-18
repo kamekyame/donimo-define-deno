@@ -82,7 +82,7 @@ Deno.test({
           color: "#ff0000",
           sync: "Last",
         },
-        { value, gate, memo: "test-memo", data },
+        [value, gate, "test-memo", data],
       ),
       new Domino.CCMLink({ id: 0 }),
       new Domino.CCMLink({ id: 0, value: 0, gate: 0 }),
@@ -113,7 +113,7 @@ Deno.test({
         fileVersion: "test",
         website: "http://example.com",
       },
-      { instrumentList, drumSetList, controlChangeMacroList, templateList },
+      [instrumentList, drumSetList, controlChangeMacroList, templateList],
     );
     const str = file.toXML();
     const restoreFile = Domino.File.fromXML(str);
@@ -126,7 +126,7 @@ Deno.test({
   fn: () => {
     const instrumentList = new Domino.InstrumentList();
 
-    const file = new Domino.File({ name: "test" }, { instrumentList });
+    const file = new Domino.File({ name: "test" }, [instrumentList]);
     const str = file.toXML();
     const restoreFile = Domino.File.fromXML(str);
     assertEquals(file, restoreFile);
@@ -139,7 +139,7 @@ Deno.test({
     const instrumentMaps = [new Domino.InstrumentMap("test-map")];
     const instrumentList = new Domino.InstrumentList(instrumentMaps);
 
-    const file = new Domino.File({ name: "test" }, { instrumentList });
+    const file = new Domino.File({ name: "test" }, [instrumentList]);
     const str = file.toXML();
     const restoreFile = Domino.File.fromXML(str);
     assertEquals(file, restoreFile);
@@ -155,7 +155,7 @@ Deno.test({
     const instrumentMaps = [new Domino.InstrumentMap("test-map", pc)];
     const instrumentList = new Domino.InstrumentList(instrumentMaps);
 
-    const file = new Domino.File({ name: "test" }, { instrumentList });
+    const file = new Domino.File({ name: "test" }, [instrumentList]);
     const str = file.toXML();
     const restoreFile = Domino.File.fromXML(str);
     assertEquals(file, restoreFile);
@@ -167,7 +167,7 @@ Deno.test({
   fn: () => {
     const controlChangeMacroList = new Domino.ControlChangeMacroList();
 
-    const file = new Domino.File({ name: "test" }, { controlChangeMacroList });
+    const file = new Domino.File({ name: "test" }, [controlChangeMacroList]);
     const str = file.toXML();
     const restoreFile = Domino.File.fromXML(str);
     assertEquals(file, restoreFile);
@@ -179,7 +179,7 @@ Deno.test({
   fn: () => {
     const templateList = new Domino.TemplateList();
 
-    const file = new Domino.File({ name: "test" }, { templateList });
+    const file = new Domino.File({ name: "test" }, [templateList]);
     const str = file.toXML();
     const restoreFile = Domino.File.fromXML(str);
     assertEquals(file, restoreFile);

@@ -24,3 +24,18 @@ Deno.test({
     }, Domino.DominoError);
   },
 });
+
+Deno.test({
+  name: "[ModuleData] Duplicate tag",
+  fn: () => {
+    const fileStr = `<?xml version="1.0" encoding="Shift_JIS"?>
+    <ModuleData Name="test">
+    <TemplateList></TemplateList>
+    <TemplateList></TemplateList>
+    </ModuleData>`;
+    assertThrows(() => {
+      const f = Domino.File.fromXML(fileStr);
+      f.toXML();
+    }, Domino.DominoError);
+  },
+});
